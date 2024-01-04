@@ -8,6 +8,10 @@ reset_interval=60  # 重置计数器的时间间隔（秒）
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
 
+# Elasticsearch配置
+elasticsearch_uri="http://192.168.3.231:9200"
+index_name="cpu_usage_logs"
+
 # 获取Java应用的进程ID和主类
 get_java_processes() {
   jps -l | awk '{print $1, $2}'
@@ -17,13 +21,25 @@ get_java_processes() {
 get_thread_stack_traces() {
   pid=$1
   jstack_output=$(jstack $pid)
-  echo "$jstack_output" | awk '/nid=/{print; getline; print}'
+  echo "$jstack_output"
 }
 
 # 发送钉钉消息
 send_dingding_message() {
   message=$1
-  curl -H "Content-Type: application/json" -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"$message\"}}" "$webhook_url"
+  curl -X POST -H "Content-Type: application/json" -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"$message\"}}" "$webhook_url"
+}
+
+# 将日志写入Elasticsearch
+write_to_elasticsearch() {
+  log=$1
+  curl -X POST -H "Content-Type: application/json" -d "$log" "$elasticsearch_uri/$index_name/_doc"
+}
+
+# 生成唯一的traceId
+generate_trace_id() {
+  trace_id=$(uuidgen)
+  echo "$trace_id"
 }
 
 # 获取所有Java应用的列表
@@ -87,11 +103,20 @@ while true; do
       echo "$thread_stack_traces" > $output_file
       echo "Thread stack traces saved to $output_file"
 
+      # 生成唯一的traceId
+      trace_id=$(generate_trace_id)
+
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTop 2 thread stack traces:\n\n$thread_stack_traces"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTrace ID: $trace_id"
 
       # 发送钉钉消息
       send_dingding_message "$message"
+
+      # 构建日志数据
+      log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$thread_stack_traces\"}"
+
+      # 写入Elasticsearch日志
+      write_to_elasticsearch "$log"
 
       count=$((count + 1))
       last_alert_time=$current_time
