@@ -16,7 +16,7 @@ get_java_processes() {
 # 获取CPU使用率
 get_cpu_usage() {
   pid=$1
-  pidstat -p $pid | awk 'NR==3 {print $7}'
+  top -b -n1 -p $pid | awk 'NR==8 {print $9}'
 }
 
 # 获取线程堆栈信息
