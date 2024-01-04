@@ -8,8 +8,32 @@ reset_interval=60  # 重置计数器的时间间隔（秒）
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
 
-# 获取所有Java应用的进程ID和主类
-java_processes=$(jps -l | awk '{print $1, $2}')
+# 获取Java应用的进程ID和主类
+get_java_processes() {
+  jps -l | awk '{print $1, $2}'
+}
+
+# 获取CPU使用率
+get_cpu_usage() {
+  pid=$1
+  pidstat -p $pid | awk 'NR==3 {print $7}'
+}
+
+# 获取线程堆栈信息
+get_thread_stack_traces() {
+  pid=$1
+  jstack_output=$(jstack $pid)
+  echo "$jstack_output" | awk '/nid=/{print; getline; print}'
+}
+
+# 发送钉钉消息
+send_dingding_message() {
+  message=$1
+  curl -H "Content-Type: application/json" -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"$message\"}}" "$webhook_url"
+}
+
+# 获取所有Java应用的列表
+java_processes=$(get_java_processes)
 
 # 如果没有Java应用，则退出脚本
 if [ -z "$java_processes" ]; then
@@ -54,26 +78,32 @@ while true; do
   fi
 
   # 获取 CPU 使用率
-  cpu_usage=$(top -b -n 1 -p $pid | awk -v threshold=$threshold 'NR>7 { if ($1 == pid) { if ($9 >= threshold) print $9 } }' pid=$pid)
+  cpu_usage=$(get_cpu_usage $pid)
 
   # 判断 CPU 使用率是否超过阈值
-  if [[ -n $cpu_usage ]]; then
+  if [[ -n $cpu_usage && $cpu_usage -ge $threshold ]]; then
     if [ $count -lt 2 ]; then
       echo "CPU usage of Java app is $cpu_usage%"
 
-      # 使用 jstack 工具获取线程堆栈
-      jstack_output=$(jstack $pid)
-
-      # 获取前两个线程的堆栈
-      top_2_threads=$(echo "$jstack_output" | awk '/nid=/{print; getline; print}')
+      # 获取线程堆栈信息
+      thread_stack_traces=$(get_thread_stack_traces $pid)
 
       # 将线程堆栈输出到文件
       output_file="jstack_output_$(date +"%Y%m%d%H%M%S").txt"
-      echo "$jstack_output" > $output_file
+      echo "$thread_stack_traces" > $output_file
       echo "Thread stack traces saved to $output_file"
 
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTop 2 thread stack traces:\n\n$top_2_threads"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTop 2 thread stack traces:\n\n$thread_stack_traces"
 
       # 发送钉钉消息
-      curl -H
+      send_dingding_message "$message"
+
+      count=$((count + 1))
+      last_alert_time=$current_time
+    fi
+  fi
+
+  # 等待指定时间间隔
+  sleep $interval
+done
