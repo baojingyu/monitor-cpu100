@@ -41,7 +41,7 @@ write_to_elasticsearch() {
   log=$1
   echo "print log"
   echo "$log"
-  curl -X POST -H "Content-Type: application/json" -d "$escaped_log" "$elasticsearch_uri/$index_name/_doc"
+  curl -X POST -H "Content-Type: application/json" -d "$log" "$elasticsearch_uri/$index_name/_doc"
 }
 
 # 生成唯一的traceId
@@ -111,7 +111,7 @@ do
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTrace ID: $trace_id\n\nThread Stack Traces (first 100 lines):\n$(echo "$escaped_thread_stack_traces" | head -n 100 | sed 's/"/\\\"/g')"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTrace ID: $trace_id\n\nThread Stack Traces (first 100 lines):\n$(echo "$escaped_thread_stack_traces" | head -n 100)"
       # 发送钉钉消息
       send_dingding_message "$message"
       # 构建日志数据
