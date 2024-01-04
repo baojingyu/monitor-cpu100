@@ -36,6 +36,7 @@ send_dingding_message() {
   local message=$1
   local is_at_all=true
   local data="{\"msgtype\": \"markdown\", \"markdown\": {\"title\": \"CPU Usage Alert\", \"text\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
+  echo "send_dingding_message: $data"
   curl "$webhook_url" -H 'Content-Type: application/json' -d "$data"
 }
 
@@ -108,7 +109,7 @@ do
       echo "Thread stack traces saved to $output_file"
      
       # 对 thread_stack_traces 进行转义
-      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
+      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/\t/\\t/g' | sed 's/\r/\\r/g' | sed 's/\n/\\n/g')
 
       # 对 thread_stack_traces 进行Markdown转义
       markdown_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/`/\\`/g')
