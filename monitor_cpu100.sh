@@ -76,7 +76,7 @@ while true; do
       message="### CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\n**Top 2 thread stack traces:**\n\n\`\`\`\n$top_2_threads\n\`\`\`"
 
       # 发送钉钉消息
-      curl -H "Content-Type: application/json" -d "{\"msgtype\":\"markdown\",\"markdown\":{\"title\":\"CPU Usage Alert\",\"text\":\"$message\"}}" "$webhook_url"
+      curl -H 'Content-Type: application/json' -d '{"msgtype":"markdown","markdown":{"title":"CPU Usage Alert","text":"'"$message"'"}}' "$webhook_url"
 
       count=$((count + 1))
       last_alert_time=$current_time
