@@ -12,11 +12,6 @@ webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bce
 elasticsearch_uri="http://192.168.3.231:9200"
 index_name="cpu_usage_logs"
 
-# 获取Java应用的进程ID和主类
-get_java_processes() {
-  jps -l | awk '{print $1, $2}'
-}
-
 # 获取线程堆栈信息
 get_thread_stack_traces() {
   pid=$1
@@ -76,7 +71,7 @@ check_index_exists() {
 }
 
 # 获取所有Java应用的列表
-java_processes=$(get_java_processes)
+java_processes=$(jps -l | awk '{print $1, $2}')
 
 # 如果没有Java应用，则退出脚本
 if [ -z "$java_processes" ]; then
@@ -146,11 +141,6 @@ while true; do
 
       # 获取线程堆栈信息
       thread_stack_traces=$(get_thread_stack_traces $pid)
-
-      # 将线程堆栈输出到文件
-      output_file="jstack_output_$(date +"%Y%m%d%H%M%S").txt"
-      echo "$thread_stack_traces" > $output_file
-      echo "Thread stack traces saved to $output_file"
 
       # 生成唯一的traceId
       trace_id=$(generate_trace_id)
