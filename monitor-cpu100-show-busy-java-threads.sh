@@ -4,10 +4,27 @@
 curl -o show-busy-java-threads https://raw.githubusercontent.com/oldratlee/useful-scripts/dev-2.x/bin/show-busy-java-threads
 chmod +x show-busy-java-threads
 
+# 检查是否在后台运行
+if [ "$(tty)" == "not a tty" ]; then
+  # 如果在后台运行，检查是否提供了进程ID参数
+  if [ -z "$1" ]; then
+    echo "Please provide the process ID of the Java application you want to monitor as an argument."
+    exit 1
+  fi
+  # 获取进程ID
+  pid=$1
+else
+  # 如果在前台运行，显示所有Java应用的列表并让用户选择进程ID
+  echo "Java applications found:"
+  echo "$java_processes"
+  echo "Please enter the process ID of the Java application you want to monitor:"
+  read pid
+fi
+
 # 设置监控时间间隔、阈值和重置时间间隔
 interval=5  # 监控时间间隔（秒）
 threshold=90  # CPU 使用率阈值（百分比）
-reset_interval=60  # 重置计数器的时间间隔（秒）
+reset_interval=90  # 重置计数器的时间间隔（秒）
 
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
@@ -15,6 +32,15 @@ webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bce
 # Elasticsearch配置
 elasticsearch_uri="http://192.168.3.231:9200"
 index_name="cpu_usage_logs"
+
+# 获取应用名
+app_name=$(echo "$java_processes" | awk -v pid=$pid '$1 == pid {print $2}')
+
+# 获取服务器IP地址
+server_ip=$(hostname -I | awk '{print $1}')
+
+# 输出当前获取的应用名和服务器IP地址
+echo "Monitoring CPU usage of Java application: $app_name on server: $server_ip"
 
 # 获取Java应用的进程ID和主类
 get_java_processes() {
@@ -30,10 +56,12 @@ get_thread_stack_traces() {
 
 # 发送钉钉消息
 send_dingding_message() {
-  message=$1
+  local message=$1
+  local is_at_all=true
   echo "print message"
   echo "$message"
-  curl -X POST -H "Content-Type: application/json" -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"$message\"}}" "$webhook_url"
+  local data="{\"msgtype\": \"markdown\", \"markdown\": {\"title\": \"CPU Usage Alert\", \"text\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
+  curl "$dingding_webhook" -H 'Content-Type: application/json' -d "$data"
 }
 
 # 将日志写入Elasticsearch
@@ -111,9 +139,9 @@ do
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTrace ID: $trace_id\n\nThread Stack Traces (first 100 lines):\n$(echo "$escaped_thread_stack_traces" | head -n 100)"
+      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- Server IP: $server_ip\n\n- CPU usage of Java app is $cpu_usage%\n\n- Trace ID: $trace_id\n\n- Thread Stack Traces (first 100 lines):\n```\n$(echo "$thread_stack_traces" | head -n 100)\n```"
       # 发送钉钉消息
-      send_dingding_message "$message"
+      send_dingding_message "$message" "18062500586"
       # 构建日志数据
       log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$escaped_thread_stack_traces\"}"
       # 写入Elasticsearch日志
