@@ -63,6 +63,7 @@ send_dingding_message() {
   echo "print message"
   echo "$message"
   local data="{\"msgtype\": \"markdown\", \"markdown\": {\"title\": \"CPU Usage Alert\", \"text\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
+  echo "$data"
   curl "$dingding_webhook" -H 'Content-Type: application/json' -d "$data"
 }
 
@@ -144,7 +145,8 @@ do
       # 发送钉钉消息
       send_dingding_message "$message"
       # 构建日志数据
-      log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$escaped_thread_stack_traces\"}"
+      threadStackTraces=$(echo "$threadStackTraces" | sed ':a;N;$!ba;s/\n/\\n/g')
+      log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$threadStackTraces\"}"
       # 写入Elasticsearch日志
       write_to_elasticsearch "$log"
       count=$((count + 1))
