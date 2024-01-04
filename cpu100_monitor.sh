@@ -42,6 +42,39 @@ generate_trace_id() {
   echo "$trace_id"
 }
 
+# 创建索引
+create_index() {
+  echo "Creating index $index_name..."
+  create_index_request='
+  {
+    "mappings": {
+      "properties": {
+        "message": {
+          "type": "text"
+        },
+        "traceId": {
+          "type": "keyword"
+        },
+        "timestamp": {
+          "type": "date"
+        },
+        "threadStackTraces": {
+          "type": "text"
+        }
+      }
+    }
+  }
+  '
+  curl -XPUT "$elasticsearch_uri/$index_name" -H 'Content-Type: application/json' -d "$create_index_request"
+  echo "Index created."
+}
+
+# 检查索引是否存在
+check_index_exists() {
+  echo "Checking if index $index_name exists..."
+  curl -s -o /dev/null -w "%{http_code}" -XHEAD "$elasticsearch_uri/$index_name"
+}
+
 # 获取所有Java应用的列表
 java_processes=$(get_java_processes)
 
@@ -68,6 +101,14 @@ app_name=$(echo "$java_processes" | awk -v pid=$pid '$1 == pid {print $2}')
 
 # 输出当前获取的应用名
 echo "Monitoring CPU usage of Java application: $app_name"
+
+# 检查索引是否存在
+if [ "$(check_index_exists)" == "200" ]; then
+  echo "Index $index_name already exists."
+else
+  # 创建索引
+  create_index
+fi
 
 # 初始化计数器和时间戳
 count=0
@@ -113,7 +154,8 @@ while true; do
       send_dingding_message "$message"
 
       # 构建日志数据
-      log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$thread_stack_traces\"}"
+      timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"timestamp\":\"$timestamp\",\"threadStackTraces\":\"$thread_stack_traces\"}"
 
       # 写入Elasticsearch日志
       write_to_elasticsearch "$log"
