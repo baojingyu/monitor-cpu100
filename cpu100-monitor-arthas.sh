@@ -39,7 +39,7 @@ get_java_processes() {
 # 调用 Arthas 的 thread 命令
 get_thread_stack_traces() {
   pid=$1
-  arthas_output=$(arthas --attach $pid --command "thread -n 3")
+  arthas_output=$(java -jar "$arthas_install_dir/arthas-boot.jar" --attach $pid --command "thread -n 3")
   echo "$arthas_output"
 }
 
