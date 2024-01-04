@@ -1,8 +1,10 @@
 #!/bin/bash
 
-# 下载 show-busy-java-threads 脚本并设置执行权限
-curl -o show-busy-java-threads https://raw.githubusercontent.com/oldratlee/useful-scripts/dev-2.x/bin/show-busy-java-threads
-chmod +x show-busy-java-threads
+# 检查 show-busy-java-threads 脚本是否存在，如果不存在则下载并设置执行权限
+if [ ! -f show-busy-java-threads ]; then
+  curl -o show-busy-java-threads https://raw.githubusercontent.com/oldratlee/useful-scripts/dev-2.x/bin/show-busy-java-threads
+  chmod +x show-busy-java-threads
+fi
 
 # 检查是否在后台运行
 if [ "$(tty)" == "not a tty" ]; then
