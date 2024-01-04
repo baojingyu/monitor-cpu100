@@ -29,7 +29,7 @@ threshold=90  # CPU 使用率阈值（百分比）
 reset_interval=90  # 重置计数器的时间间隔（秒）
 
 # 钉钉 Webhook URL
-dingding_webhook="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
+dingding_webhook="https://oapi.dingtalk.com/robot/send?access_token=23a63c41aa35939693d917df7da776826a1fa6a65ca44041a3aa20bd8c47dbdd"
 
 # Elasticsearch配置
 elasticsearch_uri="http://192.168.3.231:9200"
