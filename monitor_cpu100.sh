@@ -9,30 +9,16 @@ reset_interval=60  # 重置计数器的时间间隔（秒）
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
 
 # 获取 Java 应用的进程 ID
-processes=$(jps | awk 'BEGIN{IGNORECASE=1} /app.jar/{print $1, $2}')  # 匹配带有 "app.jar" 的应用
-
-# 检查匹配的应用数量
-process_count=$(echo "$processes" | wc -l)
+pid=$(jps | awk 'BEGIN{IGNORECASE=1} /app.jar/{print $1}')  # 匹配带有 "app.jar" 的应用
 
 # 如果没有匹配项，则退出脚本
-if [ $process_count -eq 0 ]; then
+if [ -z "$pid" ]; then
   echo "No Java application found with 'app.jar'. Exiting."
   exit 1
 fi
 
-# 如果有多个匹配项，则让用户选择要使用的应用程序
-if [ $process_count -gt 1 ]; then
-  echo "Multiple Java applications found:"
-  echo "$processes"
-  echo "Please enter the process ID of the Java application you want to monitor:"
-  read pid
-else
-  # 如果只有一个匹配项，则直接获取进程ID
-  pid=$(echo "$processes" | awk '{print $1}')
-fi
-
 # 获取应用名
-app_name=$(echo "$processes" | awk '{print $2}')
+app_name=$(jps | awk -v pid=$pid 'BEGIN{IGNORECASE=1} $1==pid{print $2; exit}')
 
 # 输出当前获取的应用名
 echo "Monitoring CPU usage of Java application: $app_name"
@@ -65,6 +51,9 @@ while true; do
 
       # 使用 jstack 工具获取线程堆栈
       jstack_output=$(jstack $pid)
+
+      # 获取前两个线程的堆栈
+      top_2_threads=$(echo "$jstack_output" | awk '/nid=/{print; getline; print}')
 
       # 将线程堆栈输出到文件
       output_file="jstack_output_$(date +"%Y%m%d%H%M%S").txt"
