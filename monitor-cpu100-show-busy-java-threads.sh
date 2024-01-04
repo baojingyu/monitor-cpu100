@@ -110,19 +110,16 @@ do
       echo "Thread stack traces saved to $output_file"
      
       # 对 thread_stack_traces 进行转义
-      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/\t/\\t/g' | sed 's/\r/\\r/g' | sed 's/\n/\\n/g')
-
-      # 对 thread_stack_traces 进行转义
-      markdown_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/`/\\`/g')
+      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
       
       # 获取当前时间（北京时间，用于显示和日志）
       display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
-
-      # 构建钉钉消息内容
-      message="CPU Usage Alert\nApplication: $app_name\nCPU usage of Java app is $cpu_usage%\nCurrent Time: $display_time\nThread Stack Traces:\n$markdown_thread_stack_traces"
       
-      # 截取消息的前70行
-      message=$(echo "$message" | head -n 70)
+      # 转义特殊符号
+      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
+     
+      # 构建钉钉消息内容
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 100 lines):\n$(echo "$escaped_thread_stack_traces" | head -n 100)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
