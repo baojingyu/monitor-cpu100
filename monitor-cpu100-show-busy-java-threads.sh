@@ -145,7 +145,7 @@ do
       # 发送钉钉消息
       send_dingding_message "$message"
       # 构建日志数据
-      threadStackTraces=$(echo "$threadStackTraces" | sed ':a;N;$!ba;s/\n/\\n/g')
+      threadStackTraces=$(echo "$threadStackTraces" | sed 's/"/\\\"/g')
       log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$threadStackTraces\"}"
       # 写入Elasticsearch日志
       write_to_elasticsearch "$log"
