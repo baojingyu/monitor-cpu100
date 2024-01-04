@@ -38,7 +38,7 @@ write_to_elasticsearch() {
 
 # 生成唯一的traceId
 generate_trace_id() {
-  trace_id=$(uuidgen)
+  trace_id=$(openssl rand -hex 16)
   echo "$trace_id"
 }
 
