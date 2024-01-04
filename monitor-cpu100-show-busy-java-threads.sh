@@ -29,7 +29,7 @@ threshold=90  # CPU 使用率阈值（百分比）
 reset_interval=90  # 重置计数器的时间间隔（秒）
 
 # 钉钉 Webhook URL
-webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
+dingding_webhook="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
 
 # Elasticsearch配置
 elasticsearch_uri="http://192.168.3.231:9200"
@@ -77,8 +77,6 @@ write_to_elasticsearch() {
 # 生成唯一的traceId
 generate_trace_id() {
   trace_id=$(openssl rand -hex 16)
-  echo "print trace_id"
-  echo "$trace_id"
 }
 
 # 获取所有Java应用的列表
@@ -138,6 +136,7 @@ do
       echo "Thread stack traces saved to $output_file"
       # 生成唯一的traceId
       trace_id=$(generate_trace_id)
+      echo "$trace_id"
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
       # 构建钉钉消息内容
