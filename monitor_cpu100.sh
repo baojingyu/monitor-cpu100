@@ -8,17 +8,29 @@ reset_interval=60  # 重置计数器的时间间隔（秒）
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=1a2457391815d5bcec7192d315e04a1816cd158329eaad5b76380441200a21e0"
 
-# 获取 Java 应用的进程 ID
-pid=$(jps | awk 'BEGIN{IGNORECASE=1} /app.jar/{print $1}')  # 匹配带有 "app.jar" 的应用
+# 获取所有Java应用的进程ID和主类
+java_processes=$(jps -l | awk '{print $1, $2}')
 
-# 如果没有匹配项，则退出脚本
-if [ -z "$pid" ]; then
-  echo "No Java application found with 'app.jar'. Exiting."
+# 如果没有Java应用，则退出脚本
+if [ -z "$java_processes" ]; then
+  echo "No Java applications found. Exiting."
+  exit 1
+fi
+
+# 显示所有Java应用的列表
+echo "Java applications found:"
+echo "$java_processes"
+echo "Please enter the process ID of the Java application you want to monitor:"
+read pid
+
+# 检查输入的进程ID是否存在
+if ! echo "$java_processes" | awk -v pid=$pid '{if ($1 == pid) exit 0; else exit 1}'; then
+  echo "Invalid process ID. Exiting."
   exit 1
 fi
 
 # 获取应用名
-app_name=$(jps | awk -v pid=$pid 'BEGIN{IGNORECASE=1} $1==pid{print $2; exit}')
+app_name=$(echo "$java_processes" | awk -v pid=$pid '$1 == pid {print $2}')
 
 # 输出当前获取的应用名
 echo "Monitoring CPU usage of Java application: $app_name"
