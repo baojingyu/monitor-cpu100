@@ -91,7 +91,15 @@ echo "Please enter the process ID of the Java application you want to monitor:"
 read pid
 
 # 检查输入的进程ID是否存在
-if ! echo "$java_processes" | awk -v pid=$pid '{if ($1 == pid) exit 0; else exit 1}'; then
+valid_pid=false
+for process in $java_processes; do
+  if [ "$process" == "$pid" ]; then
+    valid_pid=true
+    break
+  fi
+done
+
+if ! $valid_pid; then
   echo "Invalid process ID. Exiting."
   exit 1
 fi
