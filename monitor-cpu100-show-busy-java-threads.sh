@@ -141,9 +141,9 @@ do
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
       # 构建钉钉消息内容
-      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- Server IP: $server_ip\n\n- CPU usage of Java app is $cpu_usage%\n\n- Trace ID: $trace_id\n\n- Thread Stack Traces (first 100 lines):\n```\n$(echo "$thread_stack_traces" | head -n 100)\n```"
+      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- Server IP: $server_ip\n\n- CPU usage of Java app is $cpu_usage%\n\n- Trace ID: $trace_id\n\n- Thread Stack Traces (first 60 lines):\n```\n$(echo "$escaped_thread_stack_traces" | head -n 60)\n```"
       # 发送钉钉消息
-      send_dingding_message "$message" "18062500586"
+      send_dingding_message "$message"
       # 构建日志数据
       log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$escaped_thread_stack_traces\"}"
       # 写入Elasticsearch日志
