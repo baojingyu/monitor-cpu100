@@ -73,16 +73,7 @@ while true; do
       echo "Thread stack traces saved to $output_file"
 
       # 构建钉钉消息内容
-      message="### CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\n**Top 2 thread stack traces:**\n\n\`\`\`\n$top_2_threads\n\`\`\`"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nTop 2 thread stack traces:\n\n$top_2_threads"
 
       # 发送钉钉消息
-      curl -H 'Content-Type: application/json' -d '{"msgtype":"markdown","markdown":{"title":"CPU Usage Alert","text":"'"$message"'"}}' "$webhook_url"
-
-      count=$((count + 1))
-      last_alert_time=$current_time
-    fi
-  fi
-
-  # 等待指定时间间隔
-  sleep $interval
-done
+      curl -H
