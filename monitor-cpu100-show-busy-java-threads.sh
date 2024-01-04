@@ -80,7 +80,7 @@ last_alert_time=$(date +%s)
 while true
 do
   # 获取当前时间（北京时间）
-  current_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
+  current_time=$(date +%s)
 
   # 计算时间差
   elapsed_time=$((current_time - last_alert_time))
@@ -113,14 +113,17 @@ do
       # 对 thread_stack_traces 进行Markdown转义
       markdown_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/`/\\`/g')
       
+      # 获取当前时间（北京时间，用于显示和日志）
+      display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
+
       # 构建钉钉消息内容
-      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- CPU usage of Java app is $cpu_usage%\n\n- Current Time: $current_time\n\n- Thread Stack Traces:\n```\n$markdown_thread_stack_traces\n```"
+      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- CPU usage of Java app is $cpu_usage%\n\n- Current Time: $display_time\n\n- Thread Stack Traces:\n```\n$markdown_thread_stack_traces\n```"
 
       # 发送钉钉消息
       send_dingding_message "$message"
 
       # 构建日志数据
-      log="{\"message\":\"$message\",\"threadStackTraces\":\"$escaped_thread_stack_traces\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$current_time\"}"
+      log="{\"message\":\"$message\",\"threadStackTraces\":\"$escaped_thread_stack_traces\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
 
       # 写入Elasticsearch日志
       write_to_elasticsearch "$log"
