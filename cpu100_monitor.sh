@@ -13,12 +13,6 @@ get_java_processes() {
   jps -l | awk '{print $1, $2}'
 }
 
-# 获取CPU使用率
-get_cpu_usage() {
-  pid=$1
-  top -b -n1 -p $pid | awk 'NR==8 {print $9}'
-}
-
 # 获取线程堆栈信息
 get_thread_stack_traces() {
   pid=$1
@@ -78,10 +72,10 @@ while true; do
   fi
 
   # 获取 CPU 使用率
-  cpu_usage=$(get_cpu_usage $pid)
+  cpu_usage=$(top -b -n 1 -p $pid | awk -v threshold=$threshold 'NR>7 { if ($1 == pid) { if ($9 >= threshold) print $9 } }' pid=$pid)
 
   # 判断 CPU 使用率是否超过阈值
-  if [[ -n $cpu_usage && $(echo "$cpu_usage >= $threshold" | bc -l) -eq 1 ]]; then
+  if [[ -n $cpu_usage ]]; then
     if [ $count -lt 2 ]; then
       echo "CPU usage of Java app is $cpu_usage%"
 
