@@ -35,7 +35,7 @@ get_thread_stack_traces() {
 send_dingding_message() {
   local message=$1
   local is_at_all=true
-  local data="{\"msgtype\": \"markdown\", \"markdown\": {\"title\": \"CPU Usage Alert\", \"text\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
+  local data="{\"msgtype\": \"text\", \"text\": {\"content\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
   echo "send_dingding_message: $data"
   curl "$webhook_url" -H 'Content-Type: application/json' -d "$data"
 }
@@ -102,6 +102,7 @@ do
 
       # 获取线程堆栈信息
       thread_stack_traces=$(get_thread_stack_traces $pid)
+      echo "thread_stack_traces: $thread_stack_traces"
 
       # 将线程堆栈输出到文件
       output_file="jstack_output_$(date +"%Y%m%d%H%M%S").txt"
@@ -111,15 +112,18 @@ do
       # 对 thread_stack_traces 进行转义
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/\t/\\t/g' | sed 's/\r/\\r/g' | sed 's/\n/\\n/g')
 
-      # 对 thread_stack_traces 进行Markdown转义
+      # 对 thread_stack_traces 进行转义
       markdown_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/`/\\`/g')
       
       # 获取当前时间（北京时间，用于显示和日志）
       display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
 
       # 构建钉钉消息内容
-      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- CPU usage of Java app is $cpu_usage%\n\n- Current Time: $display_time\n\n- Thread Stack Traces:\n```\n$markdown_thread_stack_traces\n```"
-
+      message="CPU Usage Alert\nApplication: $app_name\nCPU usage of Java app is $cpu_usage%\nCurrent Time: $display_time\nThread Stack Traces:\n$markdown_thread_stack_traces"
+      
+      # 截取消息的前70行
+      message=$(echo "$message" | head -n 70)
+      
       # 发送钉钉消息
       send_dingding_message "$message"
 
