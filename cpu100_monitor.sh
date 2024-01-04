@@ -81,7 +81,7 @@ while true; do
   cpu_usage=$(get_cpu_usage $pid)
 
   # 判断 CPU 使用率是否超过阈值
-  if [[ -n $cpu_usage && $cpu_usage -ge $threshold ]]; then
+  if [[ -n $cpu_usage && $(echo "$cpu_usage >= $threshold" | bc -l) -eq 1 ]]; then
     if [ $count -lt 2 ]; then
       echo "CPU usage of Java app is $cpu_usage%"
 
