@@ -67,17 +67,9 @@ send_dingding_message() {
   curl "$dingding_webhook" -H 'Content-Type: application/json' -d "$data"
 }
 
-# 将日志写入Elasticsearch
-write_to_elasticsearch() {
-  log=$1
-  echo "print log"
-  echo "$log"
-  curl -X POST -H "Content-Type: application/json" -d "$log" "$elasticsearch_uri/$index_name/_doc"
-}
-
 # 生成唯一的traceId
 generate_trace_id() {
-  trace_id=$(openssl rand -hex 16)
+  openssl rand -hex 16
 }
 
 # 获取所有Java应用的列表
@@ -139,16 +131,13 @@ do
       trace_id=$(generate_trace_id)
       echo "$trace_id"
       # 转义特殊符号
-      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
+      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | head -n 60 | sed 's/"/\\\"/g')
+      # 获取当前的日期和时间
+      current_time=$(date)
       # 构建钉钉消息内容
-      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- Server IP: $server_ip\n\n- CPU usage of Java app is $cpu_usage%\n\n- Trace ID: $trace_id\n\n- Thread Stack Traces (first 60 lines):\n```\n$(echo "$escaped_thread_stack_traces" | head -n 60)\n```"
+      message="#### CPU Usage Alert\n\n- Application: $app_name\n\n- Server IP: $server_ip\n\n- CPU usage of Java app is $cpu_usage%\n\n- Trace ID: $trace_id\n\n- Current Time: $current_time\n\n- Thread Stack Traces (first 60 lines):\n```\n$escaped_thread_stack_traces\n```"
       # 发送钉钉消息
       send_dingding_message "$message"
-      # 构建日志数据
-      threadStackTraces=$(echo "$threadStackTraces" | sed 's/"/\\\"/g')
-      log="{\"message\":\"$message\",\"traceId\":\"$trace_id\",\"threadStackTraces\":\"$threadStackTraces\"}"
-      # 写入Elasticsearch日志
-      write_to_elasticsearch "$log"
       count=$((count + 1))
       last_alert_time=$current_time
     fi
