@@ -159,12 +159,12 @@ do
       
       processed_log=$(echo "$processed_log" | sed 's/^"//;s/"$//')
 
-      echo "\n"
+      echo -e "这是一行processed_log内容\n"
 
       # 打印结果
       echo $processed_log
 
-      echo "\n"
+      echo -e "这是另一行内容\n"
 
       message_log="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time"
 
@@ -173,11 +173,11 @@ do
 
       
       # 输出处理后的字符串
-      echo "\n"
+      echo -e "这是一行log内容\n"
 
       echo "$log"
 
-      echo "\n"
+      echo -e "这是另一行内容\n"
 
       # 写入Elasticsearch日志
       write_to_elasticsearch "$log"
