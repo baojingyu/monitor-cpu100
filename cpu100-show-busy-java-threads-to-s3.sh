@@ -129,22 +129,8 @@ do
       echo "$thread_stack_traces" > $output_file
       echo "Thread stack traces saved to $output_file"
      
-
-      # 生成一个随机的边界字符串
-      boundary="----WebKitFormBoundary$(openssl rand -hex 16)"
-      
-      # 使用curl上传文件
-      response=$(curl -s 'https://catbox.moe/user/api.php' \
-        -H 'accept: application/json' \
-        -H 'content-type: multipart/form-data; boundary='$boundary \
-        -H 'origin: https://catbox.moe' \
-        -H 'referer: https://catbox.moe/' \
-        -H 'x-requested-with: XMLHttpRequest' \
-        --data-binary $'--'$boundary$'\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n--'$boundary$'\r\nContent-Disposition: form-data; name="fileToUpload"; filename="'$(basename $output_file)$'"\r\nContent-Type: text/plain\r\n\r\n'$(cat $output_file)$'\r\n--'$boundary'--\r\n')
-      
-      # 打印上传后的URL
-      echo "File uploaded to: $response"
-
+      # 打印thread_stack_traces
+      echo "pring thread_stack_traces: $thread_stack_traces"
      
       # 获取当前时间（北京时间，用于显示和日志）
       display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
@@ -156,21 +142,19 @@ do
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nCurrent Thread Stack Traces File Download Url: $response\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
 
-      # 构建日志数据
-      # log="{\"message\":\"$message\",\"threadStackTraces\":\"$escaped_thread_stack_traces\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
-      
-      # escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\b/\\b/g; s/\f/\\f/g; s/\n/\\n/g; s/\r/\\r/g; s/\t/\\t/g')
+      # 转义保留18k内容
+      escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\b/\\b/g; s/\f/\\f/g; s/\n/\\n/g; s/\r/\\r/g; s/\t/\\t/g' | head -c 18k)
 
       # 构建日志数据
-      # log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
+      log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
 
       # 写入Elasticsearch日志
-      # write_to_elasticsearch "$log"
+      write_to_elasticsearch "$log"
 
       count=$((count + 1))
       last_alert_time=$current_time
