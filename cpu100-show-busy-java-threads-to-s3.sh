@@ -148,13 +148,24 @@ do
       send_dingding_message "$message"
 
       # 转义
-      escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | tr -d '\n' | sed 's/"/\\\"/g')
+      processed_log=$(echo -n "$thread_stack_traces" | tr -d '\n' | tr -d ' ')
 
       # 构建日志数据
-      log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
+      log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
+
+
+      # 转义双引号
+      processed_log=$(echo "$log" | sed 's/"/\\"/g')
+      
+      # 输出处理后的字符串
+      echo "\n"
+
+      echo "$processed_log"
+
+      echo "\n"
 
       # 写入Elasticsearch日志
-      write_to_elasticsearch "$log"
+      write_to_elasticsearch "$processed_log"
 
       count=$((count + 1))
       last_alert_time=$current_time
