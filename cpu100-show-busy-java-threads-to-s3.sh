@@ -145,7 +145,7 @@ do
       message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
       
       # 发送钉钉消息
-      send_dingding_message "$message"
+      # send_dingding_message "$message"
 
       # 转义
       processed_log=$(echo -n "$thread_stack_traces" | tr -d '\n' | tr -d ' ')
