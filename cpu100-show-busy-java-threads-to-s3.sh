@@ -147,8 +147,8 @@ do
       # 发送钉钉消息
       send_dingding_message "$message"
 
-      # 转义保留18k内容
-      escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\b/\\b/g; s/\f/\\f/g; s/\n/\\n/g; s/\r/\\r/g; s/\t/\\t/g' | head -c 18k)
+      # 转义
+      escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | tr -d '\n' | sed 's/"/\\\"/g')
 
       # 构建日志数据
       log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
