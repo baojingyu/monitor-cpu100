@@ -157,7 +157,7 @@ do
       # 运行 Java 程序并将结果保存到变量中
       processed_log=$(java -jar log-1.0-SNAPSHOT-jar-with-dependencies.jar "$thread_stack_traces")
       
-      processed_log=$(echo "$processed_log" | sed 's/^"//;s/"$//')
+      processed_log=$(echo "$processed_log"  | sed 's/^"//;s/"$//')
 
       echo -e "这是一行processed_log内容\n"
 
@@ -165,6 +165,8 @@ do
       echo $processed_log
 
       echo -e "这是另一行内容\n"
+      
+      processed_log=$(echo "$processed_log"  | sed '/^Heap PSYoungGen/d')
 
       message_log="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time"
 
