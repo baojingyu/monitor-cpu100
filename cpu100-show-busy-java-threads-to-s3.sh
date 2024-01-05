@@ -168,7 +168,7 @@ do
       
 
       # 使用sed命令匹配"PSYoungGen"并删除它以及它后面的字符
-      new_string=$(echo "$processed_log" | sed 's/PSYoungGen.*//')
+      new_string=$(echo "$processed_log" | sed 's/\\n\\\".*$//')
 
       
       echo -e "这是一行new_string内容\n"
