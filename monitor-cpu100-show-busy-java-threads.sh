@@ -37,7 +37,8 @@ get_java_processes() {
 # 获取线程堆栈信息
 get_thread_stack_traces() {
   pid=$1
-  jstack_output=$(./show-busy-java-threads -p $pid)
+  # 从所有运行的Java进程中找出最消耗CPU的线程（前3个），打印出其线程栈
+  jstack_output=$(./show-busy-java-threads -p $pid -c 3)
   echo "$jstack_output"
 }
 
@@ -137,7 +138,7 @@ do
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 300 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 300)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
