@@ -109,9 +109,6 @@ do
       echo "$thread_stack_traces" > $output_file
       echo "Thread stack traces saved to $output_file"
      
-      # 对 thread_stack_traces 进行转义
-      escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
-      
       # 获取当前时间（北京时间，用于显示和日志）
       display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
       
@@ -125,7 +122,12 @@ do
       send_dingding_message "$message"
 
       # 构建日志数据
-      log="{\"message\":\"$message\",\"threadStackTraces\":\"$escaped_thread_stack_traces\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
+      # log="{\"message\":\"$message\",\"threadStackTraces\":\"$escaped_thread_stack_traces\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
+      
+      escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\b/\\b/g; s/\f/\\f/g; s/\n/\\n/g; s/\r/\\r/g; s/\t/\\t/g')
+
+      # 构建日志数据
+      log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
 
       # 写入Elasticsearch日志
       write_to_elasticsearch "$log"
