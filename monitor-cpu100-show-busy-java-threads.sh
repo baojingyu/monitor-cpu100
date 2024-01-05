@@ -49,23 +49,31 @@ write_to_elasticsearch() {
 # 获取所有Java应用的列表
 java_processes=$(get_java_processes)
 
+
 # 如果没有Java应用，则退出脚本
 if [ -z "$java_processes" ]; then
   echo "No Java applications found. Exiting."
   exit 1
 fi
 
-# 显示所有Java应用的列表
-echo "Java applications found:"
-echo "$java_processes"
-echo "Please enter the process ID of the Java application you want to monitor:"
-read pid
+# 尝试查找名为 app.jar 的 Java 应用的进程 ID
+pid=$(echo "$java_processes" | awk '/app\.jar/ {print $1}')
+
+# 如果没有找到名为 app.jar 的 Java 应用
+if [ -z "$pid" ]; then
+  # 显示所有Java应用的列表
+  echo "Java applications found:"
+  echo "$java_processes"
+  echo "Please enter the process ID of the Java application you want to monitor:"
+  read pid
+fi
 
 # 检查输入的进程ID是否存在
 if ! echo "$java_processes" | awk -v pid=$pid '{if ($1 == pid) exit 0; else exit 1}'; then
   echo "Invalid process ID. Exiting."
   exit 1
 fi
+
 
 # 获取应用名
 app_name=$(echo "$java_processes" | awk -v pid=$pid '$1 == pid {print $2}')
