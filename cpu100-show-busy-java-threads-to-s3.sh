@@ -160,8 +160,10 @@ do
       # 打印结果
       echo $processed_log
 
+      message_log="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time"
+
       # 构建日志数据
-      log="{\"message\":\"$message\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
+      log="{\"message\":\"$message_log\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
 
       
       # 输出处理后的字符串
