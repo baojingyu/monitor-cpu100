@@ -151,21 +151,18 @@ do
       processed_log=$(echo -n "$thread_stack_traces" | tr -d '\n' | tr -d ' ')
 
       # 构建日志数据
-      log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
+      log="{\"message\":\"$message\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
 
-
-      # 转义双引号
-      processed_log=$(echo "$log" | sed 's/"/\\"/g')
       
       # 输出处理后的字符串
       echo "\n"
 
-      echo "$processed_log"
+      echo "$log"
 
       echo "\n"
 
       # 写入Elasticsearch日志
-      write_to_elasticsearch "$processed_log"
+      write_to_elasticsearch "$log"
 
       count=$((count + 1))
       last_alert_time=$current_time
