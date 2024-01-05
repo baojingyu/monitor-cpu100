@@ -6,6 +6,13 @@ if [ ! -f show-busy-java-threads ]; then
   chmod +x show-busy-java-threads
 fi
 
+# 检查 log-1.0-SNAPSHOT-jar-with-dependencies.jar 脚本是否存在，如果不存在则下载并设置执行权限
+if [ ! -f log-1.0-SNAPSHOT-jar-with-dependencies.jar ]; then
+  curl -o log-1.0-SNAPSHOT-jar-with-dependencies.jar https://raw.githubusercontent.com/baojingyu/monitor-cpu100/main/log-1.0-SNAPSHOT-jar-with-dependencies.jar
+
+  chmod +x log-1.0-SNAPSHOT-jar-with-dependencies.jar
+fi
+
 # 设置监控时间间隔、阈值和重置时间间隔
 interval=5  # 监控时间间隔（秒）
 threshold=200  # CPU 使用率阈值（百分比）
@@ -146,9 +153,12 @@ do
       
       # 发送钉钉消息
       # send_dingding_message "$message"
-
-      # 转义
-      processed_log=$(echo -n "$thread_stack_traces" | tr -d '\n' | tr -d ' ')
+      
+      # 运行 Java 程序并将结果保存到变量中
+      processed_log=$(java -jar target/log-1.0-SNAPSHOT-jar-with-dependencies.jar "$thread_stack_traces")
+      
+      # 打印结果
+      echo $processed_log
 
       # 构建日志数据
       log="{\"message\":\"$message\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
