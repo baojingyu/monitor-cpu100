@@ -177,6 +177,7 @@ do
       echo $new_string
 
       echo -e "这是另一行内容\n"
+      new_string="test test"
 
       message_log="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time"
 
