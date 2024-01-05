@@ -7,10 +7,10 @@ if [ ! -f show-busy-java-threads ]; then
 fi
 
 # 设置监控时间间隔、阈值和重置时间间隔
-interval=5  # 监控时间间隔（秒）
-threshold=90  # CPU 使用率阈值（百分比）
+interval=15  # 监控时间间隔（秒）
+threshold=200  # CPU 使用率阈值（百分比）
 reset_interval=90  # 重置计数器的时间间隔（秒）
-message_interval=90  # 消息发送间隔（秒）
+message_interval=120  # 消息发送间隔（秒）
 
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=23a63c41aa35939693d917df7da776826a1fa6a65ca44041a3aa20bd8c47dbdd"
@@ -113,7 +113,7 @@ do
       display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
       
       # 获取容器IP
-			container_ip=$(hostname -I | awk '{print $1}')
+      container_ip=$(hostname -I | awk '{print $1}')
 
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
