@@ -112,11 +112,14 @@ do
       # 获取当前时间（北京时间，用于显示和日志）
       display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
       
+      # 获取容器IP
+			container_ip=$(hostname -I | awk '{print $1}')
+
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 100 lines):\n$(echo "$escaped_thread_stack_traces" | head -n 100)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 300 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 300)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
@@ -124,13 +127,13 @@ do
       # 构建日志数据
       # log="{\"message\":\"$message\",\"threadStackTraces\":\"$escaped_thread_stack_traces\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
       
-      escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\b/\\b/g; s/\f/\\f/g; s/\n/\\n/g; s/\r/\\r/g; s/\t/\\t/g')
+      # escaped_thread_stack_traces_log=$(printf '%s' "$thread_stack_traces" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\b/\\b/g; s/\f/\\f/g; s/\n/\\n/g; s/\r/\\r/g; s/\t/\\t/g')
 
       # 构建日志数据
-      log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"currentTime\":\"$display_time\"}"
+      # log="{\"message\":\"$escaped_message\",\"threadStackTraces\":\"$escaped_thread_stack_traces_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
 
       # 写入Elasticsearch日志
-      write_to_elasticsearch "$log"
+      # write_to_elasticsearch "$log"
 
       count=$((count + 1))
       last_alert_time=$current_time
