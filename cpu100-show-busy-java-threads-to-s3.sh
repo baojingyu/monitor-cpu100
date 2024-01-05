@@ -13,45 +13,6 @@ reset_interval=60  # 重置计数器的时间间隔（秒）
 message_interval=30  # 消息发送间隔（秒）
 
 
-# AWS配置
-aws_access_key_id="AKIAV5ISR6EZQK34S4OM"
-aws_secret_access_key="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"
-aws_region="ap-east-1"
-s3_bucket="yt-public-test"
-
-# 上传文件到Amazon S3并返回文件的S3 URL
-upload_to_s3() {
-  local file_path=$1
-  local file_name=$(basename $file_path)
-  local date_path=$(date +'%Y%m%d')
-  local s3_key="cpu-monitor/$date_path/$file_name"
-
-  # 创建签名
-  current_time=$(date -u +'%Y%m%dT%H%M%SZ')
-  short_date=$(date -u +'%Y%m%d')
-  credential_scope="$short_date/$aws_region/s3/aws4_request"
-  signed_headers="host;x-amz-content-sha256;x-amz-date"
-
-  # 创建要签名的字符串
-  canonical_request="PUT\n/$s3_key\n\nhost:$s3_bucket.s3.amazonaws.com\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:$current_time\n\n$signed_headers\nUNSIGNED-PAYLOAD"
-  string_to_sign="AWS4-HMAC-SHA256\n$current_time\n$credential_scope\n$(echo -n "$canonical_request" | openssl dgst -sha256)"
-  signing_key=$(echo -n "AWS4$aws_secret_access_key" | openssl dgst -sha256 -hmac | cut -d" " -f2)
-  signature=$(echo -n "$string_to_sign" | openssl dgst -sha256 -hmac $signing_key | cut -d" " -f2)
-
-  # 使用curl上传文件
-  curl -X PUT -T "$file_path" \
-    -H "Host: $s3_bucket.s3.amazonaws.com" \
-    -H "x-amz-content-sha256: UNSIGNED-PAYLOAD" \
-    -H "x-amz-date: $current_time" \
-    -H "Authorization: AWS4-HMAC-SHA256 Credential=$aws_access_key_id/$credential_scope, SignedHeaders=$signed_headers, Signature=$signature" \
-    "https://$s3_bucket.s3.$aws_region.amazonaws.com/$s3_key"
-
-  # 返回文件的S3 URL
-  echo "https://$s3_bucket.s3.$aws_region.amazonaws.com/$s3_key"
-}
-
-
-
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=23a63c41aa35939693d917df7da776826a1fa6a65ca44041a3aa20bd8c47dbdd"
 
@@ -168,8 +129,10 @@ do
       echo "$thread_stack_traces" > $output_file
       echo "Thread stack traces saved to $output_file"
      
-			# 上传线程堆栈信息至S3
- 			s3_url=$(upload_to_s3 $output_file)
+      # 上传线程堆栈信息至S3
+      s3_url=$(curl -s -F "reqtype=fileupload" -F "fileToUpload=@$output_file" https://catbox.moe/user/api.php)
+
+      # 打印上传后的URL
       echo "File uploaded to S3: $s3_url"
      
       # 获取当前时间（北京时间，用于显示和日志）
