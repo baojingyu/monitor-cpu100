@@ -166,12 +166,22 @@ do
 
       echo -e "这是另一行内容\n"
       
-      processed_log=$(echo "$processed_log"  | sed '/^Heap PSYoungGen/d')
+
+      # 使用sed命令匹配"PSYoungGen"并删除它以及它后面的字符
+      new_string=$(echo "$processed_log" | sed 's/PSYoungGen.*//')
+
+      
+      echo -e "这是一行new_string内容\n"
+
+      # 打印结果
+      echo $new_string
+
+      echo -e "这是另一行内容\n"
 
       message_log="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time"
 
       # 构建日志数据
-      log="{\"message\":\"$message_log\",\"threadStackTraces\":\"$processed_log\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
+      log="{\"message\":\"$message_log\",\"threadStackTraces\":\"$new_string\",\"cpuUsage\":\"$cpu_usage\",\"containerIP\":\"$container_ip\",\"currentTime\":\"$display_time\"}"
 
       
       # 输出处理后的字符串
