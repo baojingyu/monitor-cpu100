@@ -155,7 +155,7 @@ do
       # send_dingding_message "$message"
       
       # 运行 Java 程序并将结果保存到变量中
-      processed_log=$(java -jar target/log-1.0-SNAPSHOT-jar-with-dependencies.jar "$thread_stack_traces")
+      processed_log=$(java -jar log-1.0-SNAPSHOT-jar-with-dependencies.jar "$thread_stack_traces")
       
       # 打印结果
       echo $processed_log
