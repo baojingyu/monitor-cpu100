@@ -8,16 +8,16 @@ fi
 
 # 设置监控时间间隔、阈值和重置时间间隔
 interval=5  # 监控时间间隔（秒）
-threshold=200  # CPU 使用率阈值（百分比）
+threshold=320  # CPU 使用率阈值（百分比）
 reset_interval=60  # 重置计数器的时间间隔（秒）
-message_interval=30  # 消息发送间隔（秒）
+message_interval=60  # 消息发送间隔（秒）
 
 # 钉钉 Webhook URL
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=23a63c41aa35939693d917df7da776826a1fa6a65ca44041a3aa20bd8c47dbdd"
 
 # Elasticsearch配置
-elasticsearch_uri="http://192.168.3.231:9200"
-index_name="cpu_usage_logs"
+# elasticsearch_uri="http://192.168.3.231:9200"
+# index_name="cpu_usage_logs"
 
 # 获取Java应用的进程ID和主类
 # get_java_processes() {
@@ -37,8 +37,8 @@ get_java_processes() {
 # 获取线程堆栈信息
 get_thread_stack_traces() {
   pid=$1
-  # 从所有运行的Java进程中找出最消耗CPU的线程（前3个），打印出其线程栈
-  jstack_output=$(./show-busy-java-threads -p $pid -c 3)
+  # 从所有运行的Java进程中找出最消耗CPU的线程（前10个），打印出其线程栈
+  jstack_output=$(./show-busy-java-threads -p $pid -c 10)
   echo "$jstack_output"
 }
 
@@ -52,10 +52,10 @@ send_dingding_message() {
 }
 
 # 将日志写入Elasticsearch
-write_to_elasticsearch() {
-  log=$1
-  curl -X POST -H "Content-Type: application/json" -d "$log" "$elasticsearch_uri/$index_name/_doc"
-}
+# write_to_elasticsearch() {
+#   log=$1
+#   curl -X POST -H "Content-Type: application/json" -d "$log" "$elasticsearch_uri/$index_name/_doc"
+# }
 
 # 获取所有Java应用的列表
 java_processes=$(get_java_processes)
@@ -138,7 +138,7 @@ do
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\noThread Stack Output File:$output_file\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
