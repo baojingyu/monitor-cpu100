@@ -87,7 +87,7 @@ fi
 
 
 # 获取应用名
-app_name=$(echo "$java_processes" | awk -v pid=$pid '$1 == pid {print $2}')
+app_name=$(ps -ef | grep java | grep -o '\-Dskywalking\.agent\.service_name=[^ ]*' | cut -d'=' -f2)
 
 # 输出当前获取的应用名
 echo "Monitoring CPU usage of Java application: $app_name"
@@ -138,7 +138,7 @@ do
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\noThread Stack Output File:$output_file\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Output File: $output_file\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
