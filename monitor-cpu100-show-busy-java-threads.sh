@@ -124,12 +124,12 @@ do
       echo "thread_stack_traces: $thread_stack_traces"
 
       # 将线程堆栈输出到文件
-      output_file="jstack_output_$(date +"%Y%m%d%H%M%S").txt"
+      output_file="jstack_output_$(date +"%Y%m%d%H%M%S%3N").txt"
       echo "$thread_stack_traces" > $output_file
       echo "Thread stack traces saved to $output_file"
      
       # 获取当前时间（北京时间，用于显示和日志）
-      display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
+      display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S.%3N")
       
       # 获取容器IP
       container_ip=$(hostname -I | awk '{print $1}')
