@@ -138,7 +138,7 @@ do
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # 构建钉钉消息内容
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Output File: $output_file\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nCurrent App Name: $app_name\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Output File: $output_file\n\nThread Stack Traces (first 200 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 200)"
       
       # 发送钉钉消息
       send_dingding_message "$message"
