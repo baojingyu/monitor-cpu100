@@ -128,13 +128,17 @@ cpu_usage=$(top -b -n 1 -p $pid | awk '/^ *'$pid'/ {print $9}')
 
 echo "当前CPU使用率：$cpu_usage%，threshold：$threshold"
 
-awk_command="awk -v cpu_usage=\"$cpu_usage\" -v threshold=\"$threshold\" 'BEGIN { printf \"cpu_usage: %s\n\", cpu_usage; printf \"threshold: %s\n\", threshold; threshold_float = sprintf(\"%.1f\", threshold); if (cpu_usage >= threshold_float) exit 1; else exit 0; }'"
+awk_command="awk -v cpu_usage=\"$cpu_usage\" -v threshold=\"$threshold\" 'BEGIN {
+  cpu_usage_int = sprintf(\"%.0f\", cpu_usage);
+  if (cpu_usage_int >= threshold) exit 1;
+  else exit 0;
+}'"
 echo "awk command: $awk_command"
 awk_result=$(eval $awk_command)
 echo "awk result: $awk_result"
 
 # 判断CPU使用率是否超过阈值
-if $(awk -v cpu_usage="$cpu_usage" -v threshold="$threshold" 'BEGIN { printf "cpu_usage: %s\n", cpu_usage; printf "threshold: %s\n", threshold; threshold_float = sprintf("%.1f", threshold); if (cpu_usage >= threshold_float) exit 1; else exit 0; }'); then
+if $(awk -v cpu_usage="$cpu_usage" -v threshold="$threshold" 'BEGIN { printf "cpu_usage: %s\n", cpu_usage; printf "threshold: %s\n", threshold; cpu_usage_int = sprintf(\"%.0f\", cpu_usage); if (cpu_usage_int >= threshold) exit 1;else exit 0; }'); then
     # CPU使用率超过阈值，输出线程堆栈信息并上传至S3
     echo "Java应用程序$app_name（$pid）当前CPU使用率：($cpu_usage%)"
      
