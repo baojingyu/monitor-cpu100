@@ -128,14 +128,14 @@ cpu_usage=$(top -b -n 1 -p $pid | awk '/^ *'$pid'/ {print $9}')
 
 echo "当前CPU使用率：$cpu_usage%，threshold：$threshold"
 
-awk_command="awk -v cpu_usage=\"$cpu_usage\" -v threshold=\"$threshold\" 'BEGIN { if (cpu_usage >= threshold) exit 1; else exit 0; }'"
+awk_command="awk -v cpu_usage=\"$cpu_usage\" -v threshold=\"$threshold\" 'BEGIN { print "cpu_usage:", cpu_usage; print "threshold:", threshold; threshold_float = sprintf("%.1f", threshold); if (cpu_usage >= threshold_float) exit 1; else exit 0; }'"
 echo "awk command: $awk_command"
 awk_result=$(eval $awk_command)
 echo "awk result: $awk_result"
 
 
   # 判断CPU使用率是否超过阈值
-  if awk -v cpu_usage="$cpu_usage" -v threshold="$threshold" 'BEGIN { if (cpu_usage >= threshold) exit 1; else exit 0; }'; then
+  if awk -v cpu_usage="$cpu_usage" -v threshold="$threshold" 'BEGIN { print "cpu_usage:", cpu_usage; print "threshold:", threshold; threshold_float = sprintf("%.1f", threshold); if (cpu_usage >= threshold_float) exit 1; else exit 0; }'; then
     # CPU使用率超过阈值，输出线程堆栈信息并上传至S3
     echo "Java应用程序$app_name（$pid）当前CPU使用率：($cpu_usage%)"
      
@@ -173,7 +173,7 @@ echo "awk result: $awk_result"
     uploaded_object_key=$(upload_file "$file_path" "$file_name")
 
     # 判断CPU使用率是否超过另一个阈值（消息推送）
-    if awk -v cpu_usage="$cpu_usage" -v threshold="$threshold_message_push" 'BEGIN {if (cpu_usage >= threshold) exit 0; else exit 1}'; then
+    if awk -v cpu_usage="$cpu_usage" -v threshold="$threshold_message_push" 'BEGIN { print "cpu_usage:", cpu_usage; print "threshold_message_push:", threshold_message_push; threshold_message_push_float = sprintf("%.1f", threshold_message_push); if (cpu_usage >= threshold_message_push_float) exit 1; else exit 0; }'; then
       # 转义特殊符号
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
