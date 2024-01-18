@@ -108,17 +108,23 @@ echo "webhook_url: $webhook_url"
 check_show_busy_java_threads() {
   if [ ! -f show-busy-java-threads ]; then
     curl -o show-busy-java-threads https://raw.githubusercontent.com/oldratlee/useful-scripts/dev-2.x/bin/show-busy-java-threads
+    if [ ! -f show-busy-java-threads ]; then
+      echo "错误: show-busy-java-threads 未下载成功"
+      exit 1
+    fi
     chmod +x show-busy-java-threads
   fi
 }
 
 # 检查 UnzipUtility java文件是否存在，如果不存在则下载并设置执行权限
-check_unzi_utility() {
-  if [ ! -f UnzipUtility.java ]; then
-    curl -o UnzipUtility.java https://raw.githubusercontent.com/baojingyu/monitor-cpu100/main/UnzipUtility.java
-    
-    # 编译 Java 代码
-    javac -d . UnzipUtility.java
+check_unzip() {
+  if [ ! -f unzip.jar ]; then
+    curl -o unzip.jar https://raw.githubusercontent.com/baojingyu/monitor-cpu100/main/unzip-1.0-SNAPSHOT.jar
+    if [ ! -f unzip.jar ]; then
+      echo "错误: unzip.jar 未下载成功"
+      exit 1
+    fi
+    chmod +x unzip.jar
   fi
 }
 
@@ -131,7 +137,14 @@ check_aws_cli(){
       curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
   
       # 解压 AWS CLI 客户端
-      java UnzipUtility "awscliv2.zip" "./aws"
+      java -jar unzip.jar "awscliv2.zip" "./aws"
+
+      # 检查"./aws"目录是否解压成功
+      if [ -d "./aws" ]; then
+          echo "aws目录存在，解压成功"
+      else
+          echo "aws目录不存在，解压失败"
+      fi
   
       # 安装 AWS CLI 客户端
       sudo ./aws/install
@@ -207,8 +220,8 @@ send_dingding_message() {
 # 检查 show-busy-java-threads 脚本是否存在
 check_show_busy_java_threads
 
-# 检查 UnzipUtility java文件是否存在
-check_unzi_utility
+# 检查 Unzip 文件是否存在
+check_unzip
 
 # 检查 Aws cli
 check_aws_cli
