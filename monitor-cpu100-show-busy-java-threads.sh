@@ -24,7 +24,7 @@ show_help() {
 }
 
 
-# 检查是否传递了 access_key 和 secret_key
+# 检查是否传递了 access_key 和 secret_key 
 check_required_params() {
   if [[ -z "$access_key" ]]; then
     echo "错误: access_key 未提供"
