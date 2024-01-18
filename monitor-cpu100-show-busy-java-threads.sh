@@ -133,23 +133,22 @@ check_aws_cli(){
   if ! command -v aws &> /dev/null; then
       echo "AWS CLI is not installed."
 
-      if [ ! -f awscliv2.jar ]; then
+      if [ ! -f awscliv2.zip ]; then
         # 下载 AWS CLI 客户端
         curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
       fi
-      
-      # 解压 AWS CLI 客户端
-      java -jar unzip.jar "awscliv2.zip" "./aws"
-
+   
       # 检查"./aws"目录是否解压成功
-      if [ -d "./aws" ]; then
-          echo "aws目录存在，解压成功"
+      if [ ! -d "./aws/aws" ]; then
+        # 解压 AWS CLI 客户端
+        java -jar unzip.jar "awscliv2.zip" "./aws"
+        echo "aws解压成功"
       else
-          echo "aws目录不存在，解压失败"
+        echo "aws目录存在，无需解压"
       fi
   
       # 安装 AWS CLI 客户端
-      sudo ./aws/install
+      sudo ./aws/aws/install
   
       echo "AWS CLI 安装完成。"
 
