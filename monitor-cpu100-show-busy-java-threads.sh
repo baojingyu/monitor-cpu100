@@ -22,6 +22,7 @@ show_help() {
   echo "    -h, --help           显示帮助信息"
 }
 
+
 # 处理参数
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -70,6 +71,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# 检查必需参数
+check_required_params
+
 # 使用配置参数进行其他操作
 echo "access_key: $access_key"
 echo "secret_key: $secret_key"
@@ -80,7 +84,23 @@ echo "bucket_name: $bucket_name"
 echo "region: $region"
 echo "webhook_url: $webhook_url"
 
+
 # 方法定义
+
+# 检查是否传递了 access_key 和 secret_key
+check_required_params() {
+  if [[ -z "$access_key" ]]; then
+    echo "错误: access_key 未提供"
+    show_help
+    exit 1
+  fi
+
+  if [[ -z "$secret_key" ]]; then
+    echo "错误: secret_key 未提供"
+    show_help
+    exit 1
+  fi
+}
 
 # 检查 show-busy-java-threads 脚本是否存在，如果不存在则下载并设置执行权限
 check_show_busy_java_threads() {
