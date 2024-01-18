@@ -112,6 +112,49 @@ check_show_busy_java_threads() {
   fi
 }
 
+# 检查 UnzipUtility java文件是否存在，如果不存在则下载并设置执行权限
+check_unzi_utility() {
+  if [ ! -f UnzipUtility.java ]; then
+    curl -o UnzipUtility.java https://raw.githubusercontent.com/baojingyu/monitor-cpu100/main/UnzipUtility.java
+    
+    # 编译 Java 代码
+    javac -d . UnzipUtility.java
+  fi
+}
+
+# 检查 AWS CLI 是否已安装
+check_aws_cli(){
+  if ! command -v aws &> /dev/null; then
+      echo "AWS CLI is not installed."
+  
+      # 下载 AWS CLI 客户端
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+  
+      # 解压 AWS CLI 客户端
+      java UnzipUtility "awscliv2.zip" "./aws"
+  
+      # 安装 AWS CLI 客户端
+      sudo ./aws/install
+  
+      echo "AWS CLI 安装完成。"
+
+      
+      # 设置AWS CLI配置文件中的访问密钥和私钥
+      aws configure set aws_access_key_id ${access_key}
+      aws configure set aws_secret_access_key ${secret_key}
+      
+      # 设置AWS CLI配置文件中的默认区域
+      aws configure set region ${region}
+
+      echo "AWS CLI aws_access ：${access_key} 配置完成。"
+      echo "AWS CLI secret_key ：${secret_key} 配置完成。"
+      echo "AWS CLI region ：${region} 配置完成。"
+
+  else
+      echo "AWS CLI 已安装。"
+  fi
+}
+
 # 获取Java应用的进程ID和主类
 get_java_processes() {
   pids=$(pgrep -f java)
@@ -124,7 +167,7 @@ get_java_processes() {
   done
 }
 
-# 获取线程堆栈信息并上传至S3
+# 获取线程堆栈信息
 get_thread_stack_traces() {
   pid=$1
   # 从所有运行的Java进程中找出最消耗CPU的线程（前10个），打印出其线程栈
@@ -132,27 +175,21 @@ get_thread_stack_traces() {
   echo "$jstack_output"
 }
 
-# 发送HTTP请求上传文件
+# 上传文件至S3
 upload_file() {
   file_path=$1 # 获取文件
   file_name=$2 # 获取文件名
 
   # 获取当前日期，格式为年月日
   current_date=$(date +%Y%m%d)  
-  # 构建签名字符串
-  date=$(date -R)
-  content_type="application/octet-stream"
-  object_key="ops/thread_stack_traces/${current_date}/${file_name}"  # 设置对象的键，包括路径和文件名
-  string_to_sign="PUT\n\n${content_type}\n${date}\n/${bucket_name}/${object_key}"
-  signature=$(echo -en "${string_to_sign}" | openssl sha256 -hmac "${secret_key}" -binary | base64)
+  # 构建对象的键，包括路径和文件名
+  object_key="ops/thread_stack_traces/${current_date}/${file_name}"
   
-  # 上传
-  curl -X PUT -T "$file_path" \
-    -H "Host: ${bucket_name}.s3.${region}.amazonaws.com" \
-    -H "Date: ${date}" \
-    -H "Content-Type: ${content_type}" \
-    -H "Authorization: AWS ${access_key}:${signature}" \
-    "https://${bucket_name}.s3.${region}.amazonaws.com/${object_key}"
+  # 使用AWS CLI命令，将文件上传到指定的S3桶
+  aws s3api put-object \
+    --bucket "$bucket_name" \
+    --key "$object_key" \
+    --body "$file_path"
 }
 
 # 发送钉钉消息
@@ -169,6 +206,12 @@ send_dingding_message() {
 
 # 检查 show-busy-java-threads 脚本是否存在
 check_show_busy_java_threads
+
+# 检查 UnzipUtility java文件是否存在
+check_unzi_utility
+
+# 检查 Aws cli
+check_aws_cli
 
 # 获取所有Java应用的列表
 java_processes=$(get_java_processes)
