@@ -132,10 +132,12 @@ check_unzip() {
 check_aws_cli(){
   if ! command -v aws &> /dev/null; then
       echo "AWS CLI is not installed."
-  
-      # 下载 AWS CLI 客户端
-      curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
-  
+
+      if [ ! -f awscliv2.jar ]; then
+        # 下载 AWS CLI 客户端
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+      fi
+      
       # 解压 AWS CLI 客户端
       java -jar unzip.jar "awscliv2.zip" "./aws"
 
