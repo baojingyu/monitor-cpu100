@@ -1,16 +1,84 @@
 #!/bin/bash
 
-# 配置参数
+# 默认配置参数
 interval=5  # 监控时间间隔（秒）
 threshold=320  # CPU 使用率阈值（百分比）
-threshold_message_push=400 # CPU 使用率阈值（百分比）,消息推送
-bucket_name="yt-nas"
-access_key="your-access-key"
-secret_key="your-secret-key"
+threshold_message_push=400  # CPU 使用率阈值（百分比），消息推送
+bucket_name="yt-nas"  # 默认 bucket_name
 region="ap-east-1"
-# webhook_url="https://oapi.dingtalk.com/robot/send?access_token=23a63c41aa35939693d917df7da776826a1fa6a65ca44041a3aa20bd8c47dbdd"
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
 
+# 显示帮助
+show_help() {
+  echo "脚本使用说明:"
+  echo "  必需选项:"
+  echo "    -a, --access-key     设置 access_key"
+  echo "    -s, --secret-key     设置 secret_key"
+  echo "  可选选项:"
+  echo "    -i, --interval       设置监控时间间隔（秒），默认为 5"
+  echo "    -t, --threshold      设置 CPU 使用率阈值（百分比），默认为 320"
+  echo "    -m, --threshold-message-push 设置 CPU 使用率阈值（百分比），消息推送，默认为 400"
+  echo "    -b, --bucket-name    设置 bucket_name，默认为 yt-nas"
+  echo "    -h, --help           显示帮助信息"
+}
+
+# 处理参数
+while [[ $# -gt 0 ]]; do
+  key="$1"
+
+  case $key in
+    -a|--access-key)
+      access_key="$2"
+      shift # 跳过参数值
+      shift # 跳过参数名
+      ;;
+    -s|--secret-key)
+      secret_key="$2"
+      shift # 跳过参数值
+      shift # 跳过参数名
+      ;;
+    -i|--interval)
+      interval="$2"
+      shift # 跳过参数值
+      shift # 跳过参数名
+      ;;
+    -t|--threshold)
+      threshold="$2"
+      shift # 跳过参数值
+      shift # 跳过参数名
+      ;;
+    -m|--threshold-message-push)
+      threshold_message_push="$2"
+      shift # 跳过参数值
+      shift # 跳过参数名
+      ;;
+    -b|--bucket-name)
+      bucket_name="$2"
+      shift # 跳过参数值
+      shift # 跳过参数名
+      ;;
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    *)
+      # 未知选项
+      echo "错误: 未知选项 $key"
+      show_help
+      exit 1
+      ;;
+  esac
+done
+
+# 使用配置参数进行其他操作
+echo "access_key: $access_key"
+echo "secret_key: $secret_key"
+echo "interval: $interval"
+echo "threshold: $threshold"
+echo "threshold_message_push: $threshold_message_push"
+echo "bucket_name: $bucket_name"
+echo "region: $region"
+echo "webhook_url: $webhook_url"
 
 # 方法定义
 
