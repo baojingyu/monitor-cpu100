@@ -144,7 +144,7 @@ upload_file() {
   content_type="application/octet-stream"
   object_key="ops/thread_stack_traces/${current_date}/${file_name}"  # 设置对象的键，包括路径和文件名
   string_to_sign="PUT\n\n${content_type}\n${date}\n/${bucket_name}/${object_key}"
-  signature=$(echo -en "${string_to_sign}" | openssl sha1 -hmac "${secret_key}" -binary | base64)
+  signature=$(echo -en "${string_to_sign}" | openssl sha256 -hmac "${secret_key}" -binary | base64)
   
   # 上传
   curl -X PUT -T "$file_path" \
@@ -153,9 +153,6 @@ upload_file() {
     -H "Content-Type: ${content_type}" \
     -H "Authorization: AWS ${access_key}:${signature}" \
     "https://${bucket_name}.s3.${region}.amazonaws.com/${object_key}"
-
-  # 返回object_key
-  echo "$object_key"
 }
 
 # 发送钉钉消息
@@ -258,7 +255,7 @@ if [ "$int_cpu_usage" -ge "$threshold" ]; then
     file_name="${output_file##*/}"
     
     # 上传线程堆栈信息文件到S3
-    uploaded_object_key=$(upload_file "$file_path" "$file_name")
+    upload_file "$file_path" "$file_name"
 
     # 判断CPU使用率是否超过另一个阈值（消息推送）
     if [ "$int_cpu_usage" -ge "$threshold_message_push" ]; then
@@ -267,7 +264,7 @@ if [ "$int_cpu_usage" -ge "$threshold" ]; then
       escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
      
       # CPU使用率超过另一个阈值，发送钉钉提醒
-      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nCurrent App Name: $app_name\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Output File To S3 Object Key: $uploaded_object_key\n\nThread Stack Traces (first 50 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 50)"
+      message="CPU Usage Alert\n\nCPU usage of Java app is $cpu_usage%\n\nCurrent App Name: $app_name\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nThread Stack Output File To S3 Object Key: ops/thread_stack_traces/$output_file\n\nThread Stack Traces (first 50 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 50)"
       send_dingding_message "$message"
     fi
   fi
