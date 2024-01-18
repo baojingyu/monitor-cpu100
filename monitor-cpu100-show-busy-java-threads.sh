@@ -127,7 +127,7 @@ do
 cpu_usage=$(top -b -n 1 -p $pid | awk '/^ *'$pid'/ {print $9}')
 
 echo "当前CPU使用率：$cpu_usage%，threshold：$threshold"
-
+echo "awk result: $(awk -v cpu_usage="$cpu_usage" -v threshold="$threshold" 'BEGIN { if (cpu_usage >= threshold) exit 1; else exit 0; }')"
   # 判断CPU使用率是否超过阈值
   if awk -v cpu_usage="$cpu_usage" -v threshold="$threshold" 'BEGIN { if (cpu_usage >= threshold) exit 1; else exit 0; }'; then
     # CPU使用率超过阈值，输出线程堆栈信息并上传至S3
