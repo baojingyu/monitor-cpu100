@@ -8,6 +8,7 @@ bucket_name="yt-nas"  # 默认 bucket_name
 region="ap-east-1"
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
 
+
 # 显示帮助
 show_help() {
   echo "脚本使用说明:"
@@ -20,6 +21,22 @@ show_help() {
   echo "    -m, --threshold-message-push 设置 CPU 使用率阈值（百分比），消息推送，默认为 400"
   echo "    -b, --bucket-name    设置 bucket_name，默认为 yt-nas"
   echo "    -h, --help           显示帮助信息"
+}
+
+
+# 检查是否传递了 access_key 和 secret_key
+check_required_params() {
+  if [[ -z "$access_key" ]]; then
+    echo "错误: access_key 未提供"
+    show_help
+    exit 1
+  fi
+
+  if [[ -z "$secret_key" ]]; then
+    echo "错误: secret_key 未提供"
+    show_help
+    exit 1
+  fi
 }
 
 
@@ -86,21 +103,6 @@ echo "webhook_url: $webhook_url"
 
 
 # 方法定义
-
-# 检查是否传递了 access_key 和 secret_key
-check_required_params() {
-  if [[ -z "$access_key" ]]; then
-    echo "错误: access_key 未提供"
-    show_help
-    exit 1
-  fi
-
-  if [[ -z "$secret_key" ]]; then
-    echo "错误: secret_key 未提供"
-    show_help
-    exit 1
-  fi
-}
 
 # 检查 show-busy-java-threads 脚本是否存在，如果不存在则下载并设置执行权限
 check_show_busy_java_threads() {
