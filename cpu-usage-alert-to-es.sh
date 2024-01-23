@@ -1,6 +1,6 @@
 #!/bin/bash
 # 默认配置参数
-thread_count=5            #要显示的线程栈数
+thread_count=10            #要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
 message_push_threshold=400 # CPU 使用率阈值（百分比），消息推送
@@ -11,18 +11,21 @@ SIT_ES_PORT="9200"
 SIT_ES_USERNAME=""
 SIT_ES_PASSWORD=""
 SIT_ES_PROTOCOL="http"
+SIT_KIBANA_URL=""https://kibana.erp-sit.yintaerp.com/app/discover""
 
 PROD_ES_HOST="10.0.139.96"
 PROD_ES_PORT="9200"
 PROD_ES_USERNAME=""
 PROD_ES_PASSWORD=""
 PROD_ES_PROTOCOL="http"
+PROD_KIBANA_URL="http://kibana.aws.yintaerp.com/app/discover"
 
 ES_HOST=""
 ES_PORT=""
 ES_USERNAME=""
 ES_PASSWORD=""
 ES_PROTOCOL=""
+KIBANA_URL=""
 
 ES_INDEX_NAME="show_busy_java_threads_stack"
 
@@ -116,12 +119,14 @@ check_env() {
     ES_USERNAME="${PROD_ES_USERNAME}"
     ES_PASSWORD="${PROD_ES_PASSWORD}"
     ES_PROTOCOL="${PROD_ES_PROTOCOL}"
+    KIBANA_URL="${PROD_KIBANA_URL}"
   else
     ES_HOST="${SIT_ES_HOST}"
     ES_PORT="${SIT_ES_PORT}"
     ES_USERNAME="${SIT_ES_USERNAME}"
     ES_PASSWORD="${SIT_ES_PASSWORD}"
     ES_PROTOCOL="${SIT_ES_PROTOCOL}"
+    KIBANA_URL="${SIT_KIBANA_URL}"
   fi
   echo "当前ES环境：${env}"
   echo "Host：${ES_HOST}"
@@ -129,6 +134,7 @@ check_env() {
   echo "UserName：${ES_USERNAME}"
   echo "Password：${ES_PASSWORD}"
   echo "Protocol：${ES_PROTOCOL}"
+  echo "Kibana_URL${KIBANA_URL}"
 }
 
 # 检查jq是否安装
@@ -248,9 +254,23 @@ createDocument() {
 # 发送钉钉消息
 send_dingding_message() {
   echo "send_dingding_message"
-  local message=$1
-  local is_at_all=true
-  local data="{\"msgtype\": \"text\", \"text\": {\"content\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
+  local file_name="$1"
+  local cpu_usage="$2"
+  local app_name="$3"
+
+  echo "file_name"
+  echo "cpu_usage"
+  echo "cpu_usage"
+  data='{
+    "msgtype": "markdown",
+    "markdown": {
+      "title": "CPU 使用率过高告警: '"${cpu_usage}"'",
+      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'</font>\n- **触发时间**: '"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'\n- **告警索引**: '"${ES_INDEX_NAME}"'\n- **告警文件**: '"${file_name}"'\n- **详情请戳**: [Kinban搜索告警文件]('"${KIBANA_URL}"')"
+    },
+    "at": {
+      "isAtAll": true
+    }
+  }'
   echo "send_dingding_message: $data"
   curl "$webhook_url" -H 'Content-Type: application/json' -d "$data"
 }
@@ -384,7 +404,7 @@ main() {
 ######################################################"
 
       # 将线程堆栈输出到文件
-      output_file="${app_name}_jstack_output_$(date +"%Y%m%d%H%M%S%3N").txt"
+      output_file="${app_name}_$(date +"%Y%m%d%H%M%S%3N").txt"
 
       # 将文件头部内容和线程堆栈信息写入输出文件
       echo "$file_header_content" >$output_file
@@ -401,12 +421,8 @@ main() {
       # 判断CPU使用率是否超过另一个阈值（消息推送）
       if [ "$int_cpu_usage" -ge "$message_push_threshold" ]; then
 
-        # 转义特殊符号
-        escaped_thread_stack_traces=$(echo "$thread_stack_traces" | sed 's/"/\\\"/g')
-
         # CPU使用率超过另一个阈值，发送钉钉提醒
-        message="CPU Usage Alert\n\nCurrent CPU Usage: $cpu_usage%\n\nCurrent App Name: $app_name\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nES Index Name: $ES_INDEX_NAME\n\nDocumentId: $result\n\nThread Stack Traces (first 25 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 25)"
-        send_dingding_message "$message"
+        send_dingding_message "$file_name" "$cpu_usage" "$app_name"
       fi
     fi
 
