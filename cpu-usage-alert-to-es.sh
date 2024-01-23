@@ -144,7 +144,7 @@ check_jq() {
 get_thread_stack_traces() {
   pid=$1
   # 从所有运行的Java进程中找出最消耗CPU的线程（前10个），打印出其线程栈
-  jstack_output=$(./show-busy-java-threads -p $pid -c ${thread_count} -l)
+  jstack_output=$(./show-busy-java-threads -p $pid -c ${thread_count})
   echo "$jstack_output"
 }
 
@@ -406,7 +406,7 @@ main() {
 
         # CPU使用率超过另一个阈值，发送钉钉提醒
         message="CPU Usage Alert\n\nCurrent CPU Usage: $cpu_usage%\n\nCurrent App Name: $app_name\n\nContainer IP: $container_ip\n\nCurrent Time: $display_time\n\nES Index Name: $ES_INDEX_NAME\n\nDocumentId: $result\n\nThread Stack Traces (first 25 lines):\n\n$(echo "$escaped_thread_stack_traces" | head -n 25)"
-        # send_dingding_message "$message"
+        send_dingding_message "$message"
       fi
     fi
 
