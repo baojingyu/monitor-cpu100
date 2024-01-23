@@ -6,11 +6,11 @@ threshold=320              # CPU 使用率阈值（百分比）
 message_push_threshold=400 # CPU 使用率阈值（百分比），消息推送
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token=49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
 
-SIT_ES_HOST="elasticsearch.erp-sit.yintaerp.com"
-SIT_ES_PORT="443"
+SIT_ES_HOST="192.168.3.232"
+SIT_ES_PORT="9200"
 SIT_ES_USERNAME=""
 SIT_ES_PASSWORD=""
-SIT_ES_PROTOCOL="https"
+SIT_ES_PROTOCOL="http"
 
 PROD_ES_HOST="10.0.139.96"
 PROD_ES_PORT="9200"
@@ -32,7 +32,7 @@ show_help() {
   echo "  必需选项:"
   echo "    -e, --env                           设置 env，支持sit、prod"
   echo "  可选选项:"
-  echo "    -c, --thread_count <num>            设置要显示的线程栈数，（缺省5个）"
+  echo "    -c, --thread_count <num>            设置要显示的线程栈数，（缺省10个）"
   echo "    -i, --interval <num>                设置监控时间间隔（秒），默认为 5"
   echo "    -t, --threshold <num>               设置 CPU 使用率阈值（百分比），默认为 320"
   echo "    -m, --message_push_threshold <num>  设置 CPU 使用率阈值（百分比），消息推送，默认为 400"
@@ -132,11 +132,12 @@ check_env() {
 }
 
 # 检查jq是否安装
-check_jq(){
-  if ! command -v jq &> /dev/null; then
-    echo "错误:未安装jq。请安装jq以继续。"
+check_jq() {
+  echo "check_jq"
+  if ! whereis -b jq &>/dev/null; then
+    echo "错误: 未安装jq。请安装jq以继续。"
     exit 1
-fi
+  fi
 }
 
 # 获取线程堆栈信息并上传至S3
@@ -149,8 +150,9 @@ get_thread_stack_traces() {
 
 # 检查索引是否存在
 check_index() {
-  index_exists=$(curl -s -o /dev/null -w "%{http_code}" -u "${ES_USERNAME}:${ES_PASSWORD}" -X HEAD "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}")
-  if [ "${index_exists}" == "200" ]; then
+  echo "check_index"
+  response=$(curl -s -o /dev/null -w "%{http_code}" -u "${ES_USERNAME}:${ES_PASSWORD}" -X GET "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}")
+  if [ "${response}" == "200" ]; then
     echo "索引 ${ES_INDEX_NAME} 存在."
   else
     echo "索引 ${ES_INDEX_NAME} 不存在。正在创建索引..."
@@ -160,6 +162,7 @@ check_index() {
 
 # 创建索引
 create_index() {
+  echo "create_index"
   curl -u "${ES_USERNAME}:${ES_PASSWORD}" -X PUT "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}" -H "Content-Type: application/json" -d '{
     "mappings": {
       "properties": {
@@ -198,6 +201,7 @@ create_index() {
 
 # 发送HTTP请求创建文档
 createDocument() {
+  echo "createDocument"
   # 检查索引是否存在
   check_index
 
@@ -243,6 +247,7 @@ createDocument() {
 
 # 发送钉钉消息
 send_dingding_message() {
+  echo "send_dingding_message\n"
   local message=$1
   local is_at_all=true
   local data="{\"msgtype\": \"text\", \"text\": {\"content\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
