@@ -131,6 +131,14 @@ check_env() {
   echo "Protocol：${ES_PROTOCOL}"
 }
 
+# 检查jq是否安装
+check_jq(){
+  if ! command -v jq &> /dev/null; then
+    echo "错误:未安装jq。请安装jq以继续。"
+    exit 1
+fi
+}
+
 # 获取线程堆栈信息并上传至S3
 get_thread_stack_traces() {
   pid=$1
@@ -280,6 +288,9 @@ main() {
 
   # 检查环境
   check_env
+
+  # 检查jq是否安装
+  check_jq
 
   # 检索索引
   check_index
