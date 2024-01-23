@@ -187,7 +187,7 @@ create_index() {
         "message": {
           "type": "text"
         },
-        "originalFileName": {
+        "traceId": {
           "type": "text"
         }
       }
@@ -212,7 +212,7 @@ createDocument() {
   check_index
 
   local file_path="$1"
-  local file_name="$2"
+  local file_prefix="$2"
   local cpu_usage="$3"
   local app_name="$4"
 
@@ -232,7 +232,7 @@ createDocument() {
     "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
     "ip": "'"${container_ip}"'",
     "message": '"${json_value}"',
-    "originalFileName": "'"${file_name}"'"
+    "traceId": "'"${file_prefix}"'"
   }'
 
   printf "JSON内容\n%s\n" "$data"
@@ -254,18 +254,15 @@ createDocument() {
 # 发送钉钉消息
 send_dingding_message() {
   echo "send_dingding_message"
-  local file_name="$1"
+  local file_prefix="$1"
   local cpu_usage="$2"
   local app_name="$3"
 
-  echo "file_name"
-  echo "cpu_usage"
-  echo "cpu_usage"
   data='{
     "msgtype": "markdown",
     "markdown": {
       "title": "CPU 使用率过高告警: '"${cpu_usage}"'",
-      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'</font>\n- **触发时间**: '"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'\n- **告警索引**: '"${ES_INDEX_NAME}"'\n- **告警文件**: '"${file_name}"'\n- **详情请戳**: [Kinban搜索告警文件]('"${KIBANA_URL}"')"
+      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'</font>\n- **触发时间**: '"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'\n- **告警索引**: '"${ES_INDEX_NAME}"'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
     },
     "at": {
       "isAtAll": true
@@ -403,26 +400,31 @@ main() {
 ######################################################"
 
       # 将线程堆栈输出到文件
-      output_file="${app_name}_$(date +"%Y%m%d%H%M%S%3N").txt"
+      output_file="${app_name}_$(date +"%Y%m%d%H%M%S").txt"
 
       # 将文件头部内容和线程堆栈信息写入输出文件
       echo "$file_header_content" >$output_file
       echo "$thread_stack_traces" >>$output_file
       echo "线程堆栈跟踪保存到： $output_file"
 
-      # 从输出文件路径中提取文件名
-      file_name="${output_file##*/}"
+      # 文件名前缀
+      file_prefix="${output_file%.*}"
 
       # 调用 createDocument 方法
-      result=$(createDocument "$output_file" "$file_name" "$cpu_usage" "$app_name")
-      echo "result: $result"
+      createDocument "$output_file" "$file_prefix" "$cpu_usage" "$app_name"
 
       # 判断CPU使用率是否超过另一个阈值（消息推送）
       if [ "$int_cpu_usage" -ge "$message_push_threshold" ]; then
-
         # CPU使用率超过另一个阈值，发送钉钉提醒
-        send_dingding_message "$file_name" "$cpu_usage" "$app_name"
+        send_dingding_message "$file_prefix" "$cpu_usage" "$app_name"
       fi
+
+      # 删除堆栈文件
+      if [ -f "$output_file" ]; then
+        rm "$output_file"
+        echo "已删除文件: $output_file"
+      fi
+
     fi
 
     sleep $interval
