@@ -188,7 +188,7 @@ create_index() {
           "type": "text"
         },
         "originalFileName": {
-          "type": "keyword"
+          "type": "text"
         }
       }
     }
