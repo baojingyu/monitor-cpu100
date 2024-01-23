@@ -1,6 +1,6 @@
 #!/bin/bash
 # 默认配置参数
-thread_count=10            #要显示的线程栈数
+thread_count=10            # 要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
 message_push_threshold=400 # CPU 使用率阈值（百分比），消息推送
@@ -184,7 +184,7 @@ create_index() {
         "ip": {
           "type": "ip"
         },
-        "document": {
+        "message": {
           "type": "text"
         },
         "originalFileName": {
@@ -231,7 +231,7 @@ createDocument() {
     "appName": "'"${app_name}"'",
     "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
     "ip": "'"${container_ip}"'",
-    "document": '"${json_value}"',
+    "message": '"${json_value}"',
     "originalFileName": "'"${file_name}"'"
   }'
 
@@ -384,7 +384,6 @@ main() {
       echo "Java应用程序：$app_name（$pid）当前CPU使用率：($cpu_usage%)"
 
       # 获取线程堆栈信息
-      # thread_stack_traces=$(cat "./_jstack_output_202401191115013N.txt")
       thread_stack_traces=$(get_thread_stack_traces $pid)
 
       # 打印线程堆栈信息
