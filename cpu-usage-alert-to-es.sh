@@ -1,6 +1,6 @@
 #!/bin/bash
 # 默认配置参数
-thread_count=10            #要显示的线程栈数
+thread_count=5            #要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
 message_push_threshold=400 # CPU 使用率阈值（百分比），消息推送
@@ -170,7 +170,7 @@ create_index() {
           "type": "double"
         },
         "appName": {
-          "type": "keyword"
+          "type": "text"
         },
         "timestamp": {
           "type": "date"
@@ -179,7 +179,7 @@ create_index() {
           "type": "ip"
         },
         "document": {
-          "type": "keyword"
+          "type": "text"
         },
         "originalFileName": {
           "type": "keyword"
@@ -247,7 +247,7 @@ createDocument() {
 
 # 发送钉钉消息
 send_dingding_message() {
-  echo "send_dingding_message\n"
+  echo "send_dingding_message"
   local message=$1
   local is_at_all=true
   local data="{\"msgtype\": \"text\", \"text\": {\"content\": \"$message\"}, \"at\": {\"isAtAll\": $is_at_all}}"
