@@ -4,7 +4,9 @@ thread_count=10            # 要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
 message_push_threshold=400 # CPU 使用率阈值（百分比），消息推送
-webhook_url="https://oapi.dingtalk.com/robot/send?access_token=49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
+webhook_url="https://oapi.dingtalk.com/robot/send?access_token="
+access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
+# access_token="49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091" # dev群
 
 SIT_ES_HOST="192.168.3.232"
 SIT_ES_PORT="9200"
@@ -33,16 +35,17 @@ ES_INDEX_NAME="show_busy_java_threads_stack"
 show_help() {
   echo "脚本使用说明:"
   echo "  必需选项:"
-  echo "    -e, --env                           设置 env，支持sit、prod"
+  echo "    -env, --env                                               设置 env，支持sit、prod"
   echo "  可选选项:"
-  echo "    -c, --thread_count <num>            设置要显示的线程栈数，（缺省10个）"
-  echo "    -i, --interval <num>                设置监控时间间隔（秒），默认为 5"
-  echo "    -t, --threshold <num>               设置 CPU 使用率阈值（百分比），默认为 320"
-  echo "    -m, --message_push_threshold <num>  设置 CPU 使用率阈值（百分比），消息推送，默认为 400"
-  echo "    -h, --help                          显示帮助信息"
+  echo "    -access_token, --access_token                             设置钉钉机器人访问令牌，（缺省：应用负责人群）"
+  echo "    -thread_count, --thread_count <num>                       设置要显示的线程栈数，（缺省10个）"
+  echo "    -interval, --interval <num>                               设置监控时间间隔（秒），（缺省5秒）"
+  echo "    -threshold, --threshold <num>                             设置 CPU 使用率阈值（百分比），默认为 320"
+  echo "    -message_push_threshold, --message_push_threshold <num>   设置 CPU 使用率阈值（百分比），消息推送，默认为 400"
+  echo "    -help, --help                                             显示帮助信息"
 }
 
-# 检查是否传递了 access_key 和 secret_key
+# 检查是否传递了 env
 check_required_params() {
   if [[ -z "$env" ]]; then
     echo "错误: env 未提供"
@@ -54,32 +57,37 @@ check_required_params() {
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
-  -e | --env)
+  -access_token | --access_token)
+    access_token="$2"
+    shift # 跳过参数值
+    shift # 跳过参数名
+    ;;
+  -env | --env)
     env="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -c | --thread_count)
+  -thread_count | --thread_count)
     thread_count="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -i | --interval)
+  -interval | --interval)
     interval="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -t | --threshold)
+  -threshold | --threshold)
     threshold="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -m | --message_push_threshold)
+  -message_push_threshold | --message_push_threshold)
     message_push_threshold="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -h | --help)
+  -help | --help)
     show_help
     exit 0
     ;;
@@ -95,6 +103,7 @@ done
 # 检查必需参数
 check_required_params
 # 使用配置参数进行其他操作
+echo "access_token: $access_token"
 echo "env: $env"
 echo "thread_count: $thread_count"
 echo "interval: $interval"
@@ -257,19 +266,22 @@ send_dingding_message() {
   local file_prefix="$1"
   local cpu_usage="$2"
   local app_name="$3"
+  local display_time="$4"
 
   data='{
     "msgtype": "markdown",
     "markdown": {
-      "title": "CPU 使用率过高告警: '"${cpu_usage}"'",
-      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'</font>\n- **触发时间**: '"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'\n- **告警索引**: '"${ES_INDEX_NAME}"'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
+      "title": "CPU 使用率过高告警: '"${cpu_usage}"'%",
+      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${env}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
     },
     "at": {
       "isAtAll": true
     }
   }'
+
   echo "send_dingding_message: $data"
-  curl "$webhook_url" -H 'Content-Type: application/json' -d "$data"
+  local url="$webhook_url$access_token"
+  curl "$url" -H 'Content-Type: application/json' -d "$data"
 }
 
 # 获取应用名称
@@ -372,13 +384,12 @@ main() {
 
     # 将浮点数转换为整数
     int_cpu_usage=$(printf "%.0f" "$cpu_usage")
-    echo "当前CPU使用率（整数）：$int_cpu_usage%，threshold：$threshold%"
 
     # 判断CPU使用率是否超过阈值
     if [ "$int_cpu_usage" -ge "$threshold" ]; then
 
       # CPU使用率超过阈值，输出线程堆栈信息并写入到ES
-      echo "Java应用程序：$app_name（$pid）当前CPU使用率：($cpu_usage%)"
+      echo "Java应用程序：$app_name（$pid）当前CPU使用率：($cpu_usage%)，threshold：$threshold%"
 
       # 获取线程堆栈信息
       thread_stack_traces=$(get_thread_stack_traces $pid)
@@ -387,7 +398,7 @@ main() {
       echo "打印线程堆栈信息: $thread_stack_traces"
 
       # 获取当前时间（北京时间，用于显示和日志）
-      display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S.%3N")
+      display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
 
       # 构建文件头部内容
       file_header_content="######################################################
@@ -416,7 +427,7 @@ main() {
       # 判断CPU使用率是否超过另一个阈值（消息推送）
       if [ "$int_cpu_usage" -ge "$message_push_threshold" ]; then
         # CPU使用率超过另一个阈值，发送钉钉提醒
-        send_dingding_message "$file_prefix" "$cpu_usage" "$app_name"
+        send_dingding_message "$file_prefix" "$cpu_usage" "$app_name" "$display_time"
       fi
 
       # 删除堆栈文件
