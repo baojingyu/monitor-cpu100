@@ -13,7 +13,7 @@ SIT_ES_PORT="9200"
 SIT_ES_USERNAME=""
 SIT_ES_PASSWORD=""
 SIT_ES_PROTOCOL="http"
-SIT_KIBANA_URL=""https://kibana.erp-sit.yintaerp.com/app/discover""
+SIT_KIBANA_URL="https://kibana.erp-sit.yintaerp.com/app/discover"
 
 PROD_ES_HOST="10.0.139.96"
 PROD_ES_PORT="9200"
@@ -45,7 +45,7 @@ show_help() {
   echo "    -help, --help                                             显示帮助信息"
 }
 
-# 检查是否传递了 env
+# 检查是否传递了 access_key 和 secret_key
 check_required_params() {
   if [[ -z "$env" ]]; then
     echo "错误: env 未提供"
@@ -166,7 +166,7 @@ get_thread_stack_traces() {
 # 检查索引是否存在
 check_index() {
   echo "check_index"
-  response=$(curl -s -o /dev/null -w "%{http_code}" -u "${ES_USERNAME}:${ES_PASSWORD}" -X GET "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}")
+  response=$(curl -s -o /dev/null -w "%{http_code}" -u "${ES_USERNAME}:${ES_PASSWORD}" -X GET "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}-$(date +"%Y.%m.%d")")
   if [ "${response}" == "200" ]; then
     echo "索引 ${ES_INDEX_NAME} 存在."
   else
@@ -178,7 +178,7 @@ check_index() {
 # 创建索引
 create_index() {
   echo "create_index"
-  curl -u "${ES_USERNAME}:${ES_PASSWORD}" -X PUT "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}" -H "Content-Type: application/json" -d '{
+  curl -u "${ES_USERNAME}:${ES_PASSWORD}" -X PUT "${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}-$(date +"%Y.%m.%d")" -H "Content-Type: application/json" -d '{
     "mappings": {
       "properties": {
         "cpuUsage": {
@@ -232,7 +232,7 @@ createDocument() {
   json_value=$(echo "${file_content}" | jq -Rs .)
 
   # 构建请求 URL
-  url="${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}/_doc"
+  url="${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}-$(date +"%Y.%m.%d")/_doc"
 
   # 构建请求数据
   data='{
@@ -272,7 +272,7 @@ send_dingding_message() {
     "msgtype": "markdown",
     "markdown": {
       "title": "CPU 使用率过高告警: '"${cpu_usage}"'%",
-      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${env}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
+      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${env}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
     },
     "at": {
       "isAtAll": true
