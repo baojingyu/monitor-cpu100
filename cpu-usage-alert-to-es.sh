@@ -1,6 +1,6 @@
 #!/bin/bash
 # 默认配置参数
-run_run_env=""             # 默认空 
+run_env=""             # 默认空 
 thread_count=10            # 要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
