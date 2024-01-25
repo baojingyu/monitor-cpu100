@@ -1,5 +1,6 @@
 #!/bin/bash
 # 默认配置参数
+run_run_env=""             # 默认空 
 thread_count=10            # 要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
@@ -35,7 +36,7 @@ ES_INDEX_NAME="show_busy_java_threads_stack"
 show_help() {
   echo "脚本使用说明:"
   echo "  必需选项:"
-  echo "    -env, --env                                               设置 env，支持sit、prod"
+  echo "    -run_env, --run_env                                       设置 run_env，支持sit、prod"
   echo "  可选选项:"
   echo "    -access_token, --access_token                             设置钉钉机器人访问令牌，（缺省：应用负责人群）"
   echo "    -thread_count, --thread_count <num>                       设置要显示的线程栈数，（缺省10个）"
@@ -47,8 +48,8 @@ show_help() {
 
 # 检查是否传递了 access_key 和 secret_key
 check_required_params() {
-  if [[ -z "$env" ]]; then
-    echo "错误: env 未提供"
+  if [[ -z "$run_env" ]]; then
+    echo "错误: run_env 未提供"
     show_help
     exit 1
   fi
@@ -62,8 +63,8 @@ while [[ $# -gt 0 ]]; do
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -env | --env)
-    env="$2"
+  -run_env | --run_env)
+    run_env="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
@@ -104,7 +105,7 @@ done
 check_required_params
 # 使用配置参数进行其他操作
 echo "access_token: $access_token"
-echo "env: $env"
+echo "run_env: $run_env"
 echo "thread_count: $thread_count"
 echo "interval: $interval"
 echo "threshold: $threshold"
@@ -121,8 +122,8 @@ check_show_busy_java_threads() {
 }
 
 # 检查环境
-check_env() {
-  if [[ "$(env)" == "prod" ]]; then
+check_run_env() {
+  if [[ "${run_env}" == "prod" ]]; then
     ES_HOST="${PROD_ES_HOST}"
     ES_PORT="${PROD_ES_PORT}"
     ES_USERNAME="${PROD_ES_USERNAME}"
@@ -137,7 +138,7 @@ check_env() {
     ES_PROTOCOL="${SIT_ES_PROTOCOL}"
     KIBANA_URL="${SIT_KIBANA_URL}"
   fi
-  echo "当前ES环境：${env}"
+  echo "当前ES环境：${run_env}"
   echo "Host：${ES_HOST}"
   echo "Port：${ES_PORT}"
   echo "UserName：${ES_USERNAME}"
@@ -272,7 +273,7 @@ send_dingding_message() {
     "msgtype": "markdown",
     "markdown": {
       "title": "CPU 使用率过高告警: '"${cpu_usage}"'%",
-      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${env}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
+      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${run_env}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
     },
     "at": {
       "isAtAll": true
@@ -321,7 +322,7 @@ main() {
   check_show_busy_java_threads
 
   # 检查环境
-  check_env
+  check_run_env
 
   # 检查jq是否安装
   check_jq
