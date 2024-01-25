@@ -1,6 +1,6 @@
 #!/bin/bash
 # 默认配置参数
-run_env=""             # 默认空 
+run_env=""                 # 默认空 
 thread_count=10            # 要显示的线程栈数
 interval=5                 # 监控时间间隔（秒）
 threshold=320              # CPU 使用率阈值（百分比）
@@ -206,7 +206,6 @@ create_index() {
 
   if [ $? -eq 0 ]; then
     echo "索引 ${INDEX_NAME} 创建成功."
-    upload_file
   else
     echo "创建索引失败 ${INDEX_NAME}."
     # 退出
