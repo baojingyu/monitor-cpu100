@@ -1,10 +1,10 @@
 #!/bin/bash
 # 默认配置参数
-run_env=""                 # 默认空 
-thread_count=10            # 要显示的线程栈数
-interval=5                 # 监控时间间隔（秒）
-threshold=320              # CPU 使用率阈值（百分比）
-message_push_threshold=400 # CPU 使用率阈值（百分比），消息推送
+environment=""                 # 默认空
+thread_count=10                # 要显示的线程栈数
+interval=5                     # 监控时间间隔（秒）
+threshold=320                  # CPU 使用率阈值（百分比）
+alarm_threshold=400     # CPU 使用率阈值（百分比），消息推送
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token="
 access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
 # access_token="49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091" # dev群
@@ -36,24 +36,25 @@ ES_INDEX_NAME="show_busy_java_threads_stack"
 show_help() {
   echo "脚本使用说明:"
   echo "  必需选项:"
-  echo "    -run_env, --run_env                                       设置 run_env，支持sit、prod"
+  echo "    -environment, --environment                               设置 environment，支持sit、prod"
   echo "  可选选项:"
   echo "    -access_token, --access_token                             设置钉钉机器人访问令牌，（缺省：应用负责人群）"
   echo "    -thread_count, --thread_count <num>                       设置要显示的线程栈数，（缺省10个）"
   echo "    -interval, --interval <num>                               设置监控时间间隔（秒），（缺省5秒）"
-  echo "    -threshold, --threshold <num>                             设置 CPU 使用率阈值（百分比），默认为 320"
-  echo "    -message_push_threshold, --message_push_threshold <num>   设置 CPU 使用率阈值（百分比），消息推送，默认为 400"
+  echo "    -threshold, --threshold <num>                             设置 CPU 使用率监控阈值（百分比），默认为 320"
+  echo "    -alarm_threshold, --alarm_threshold <num>                 设置 CPU 使用率告警阈值（百分比），告警推送，默认为 400"
   echo "    -help, --help                                             显示帮助信息"
 }
 
-# 检查是否传递了 access_key 和 secret_key
+# 检查是否传递了 environment
 check_required_params() {
-  if [[ -z "$run_env" ]]; then
-    echo "错误: run_env 未提供"
+  if [[ -z "$environment" ]]; then
+    echo "错误: environment 未提供"
     show_help
     exit 1
   fi
 }
+
 # 处理参数
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -63,8 +64,8 @@ while [[ $# -gt 0 ]]; do
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -run_env | --run_env)
-    run_env="$2"
+  -environment | --environment)
+    environment="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
@@ -83,8 +84,8 @@ while [[ $# -gt 0 ]]; do
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
-  -message_push_threshold | --message_push_threshold)
-    message_push_threshold="$2"
+  -alarm_threshold | --alarm_threshold)
+    alarm_threshold="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
@@ -105,11 +106,11 @@ done
 check_required_params
 # 使用配置参数进行其他操作
 echo "access_token: $access_token"
-echo "run_env: $run_env"
+echo "environment: $environment"
 echo "thread_count: $thread_count"
 echo "interval: $interval"
 echo "threshold: $threshold"
-echo "threshold_message_push: $threshold_message_push"
+echo "alarm_threshold: $alarm_threshold"
 echo "webhook_url: $webhook_url"
 
 # 方法定义
@@ -121,24 +122,27 @@ check_show_busy_java_threads() {
   fi
 }
 
-# 检查环境
-check_run_env() {
-  if [[ "${run_env}" == "prod" ]]; then
+# 检查环境并设置配置
+check_environment() {
+  if [[ "${environment}" == "prod" ]]; then
     ES_HOST="${PROD_ES_HOST}"
     ES_PORT="${PROD_ES_PORT}"
     ES_USERNAME="${PROD_ES_USERNAME}"
     ES_PASSWORD="${PROD_ES_PASSWORD}"
     ES_PROTOCOL="${PROD_ES_PROTOCOL}"
     KIBANA_URL="${PROD_KIBANA_URL}"
-  else
+  elif [[ "${environment}" == "sit" ]]; then
     ES_HOST="${SIT_ES_HOST}"
     ES_PORT="${SIT_ES_PORT}"
     ES_USERNAME="${SIT_ES_USERNAME}"
     ES_PASSWORD="${SIT_ES_PASSWORD}"
     ES_PROTOCOL="${SIT_ES_PROTOCOL}"
     KIBANA_URL="${SIT_KIBANA_URL}"
+  else
+    echo "未识别的运行环境：${environment}" >&2
+    return 1 # 返回错误状态码表示未匹配到有效环境
   fi
-  echo "当前ES环境：${run_env}"
+  echo "当前ES环境：${environment}"
   echo "Host：${ES_HOST}"
   echo "Port：${ES_PORT}"
   echo "UserName：${ES_USERNAME}"
@@ -272,7 +276,7 @@ send_dingding_message() {
     "msgtype": "markdown",
     "markdown": {
       "title": "CPU 使用率过高告警: '"${cpu_usage}"'%",
-      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${run_env}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
+      "text": "# <font color=\"red\">CPU 使用率过高告警</font>\n- **告警环境**: '"${environment}"'\n- **告警应用**: '"${app_name}"'\n- **告警设备**: '"${container_ip}"'\n- **触发时值**: <font color=\"red\">'"${cpu_usage}"'%</font>\n- **触发时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${file_prefix}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${KIBANA_URL}"')"
     },
     "at": {
       "isAtAll": true
@@ -321,7 +325,7 @@ main() {
   check_show_busy_java_threads
 
   # 检查环境
-  check_run_env
+  check_environment
 
   # 检查jq是否安装
   check_jq
@@ -403,7 +407,7 @@ main() {
       # 构建文件头部内容
       file_header_content="######################################################
 # CPU Usage Alert
-# 
+#
 # Current CPU Usage: $cpu_usage%
 # Current App Name: $app_name
 # Current Time: $display_time
@@ -425,7 +429,7 @@ main() {
       createDocument "$output_file" "$file_prefix" "$cpu_usage" "$app_name"
 
       # 判断CPU使用率是否超过另一个阈值（消息推送）
-      if [ "$int_cpu_usage" -ge "$message_push_threshold" ]; then
+      if [ "$int_cpu_usage" -ge "$alarm_threshold" ]; then
         # CPU使用率超过另一个阈值，发送钉钉提醒
         send_dingding_message "$file_prefix" "$cpu_usage" "$app_name" "$display_time"
       fi
