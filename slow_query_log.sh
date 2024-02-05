@@ -1,10 +1,6 @@
 #!/bin/bash
 source /etc/profile
 
-# 定义环境变量
-export AWS_ACCESS_KEY_ID="123"
-export AWS_SECRET_ACCESS_KEY="456"
-
 echo "start download aws mysql slow logs"
 databases_list=(aurora-erp-mysql aurora-tms-mysql aurora-bi-mysql)
 dtime=$(date -u +%F)
@@ -14,8 +10,11 @@ logdir="/usr/local/filebeat/logs"
 env=""     # 默认空
 log_num=10 # 默认统计10条慢查询日志
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token="
-# access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
-access_token="49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
+access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
+# access_token="49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
+
+awsAccessKeyId=""
+awsSecretAccessKey=""
 
 SIT_ES_HOST="192.168.3.232"
 SIT_ES_PORT="9200"
@@ -49,6 +48,8 @@ show_help() {
   echo "  必需选项:"
   echo "    -env, --env                                               设置 env，支持sit、prod"
   echo "  可选选项:"
+  echo "    -awsAccessKeyId, --awsAccessKeyId                         设置awsAccessKeyId"
+  echo "    -awsSecretAccessKey, --awsSecretAccessKey                 设置awsSecretAccessKey"
   echo "    -log_num, --log_num                                       设置慢查询日志条数，（缺省：10条）"
   echo "    -access_token, --access_token                             设置钉钉机器人访问令牌，（缺省：应用负责人群）"
   echo "    -help, --help                                             显示帮助信息"
@@ -74,6 +75,16 @@ while [[ $# -gt 0 ]]; do
     ;;
   -env | --env)
     env="$2"
+    shift # 跳过参数值
+    shift # 跳过参数名
+    ;;
+  -awsAccessKeyId | --awsAccessKeyId)
+    awsAccessKeyId="$2"
+    shift # 跳过参数值
+    shift # 跳过参数名
+    ;;
+  -awsSecretAccessKey | --awsSecretAccessKey)
+    awsSecretAccessKey="$2"
     shift # 跳过参数值
     shift # 跳过参数名
     ;;
@@ -105,6 +116,16 @@ check_env() {
     ES_PROTOCOL="${PROD_ES_PROTOCOL}"
     KIBANA_URL="${PROD_KIBANA_URL}"
     KIBANA_INDEX_UUID="${PROD_KIBANA_INDEX_UUID}"
+
+    if [[ -n "$awsAccessKeyId" && -n "$awsSecretAccessKey" ]]; then
+      # 定义环境变量
+      export AWS_ACCESS_KEY_ID="$awsAccessKeyId"
+      export AWS_SECRET_ACCESS_KEY="$awsSecretAccessKey"
+    else
+      echo "缺少awsAccessKeyId或secretAccessKey。正在退出。"
+      exit 1
+    fi
+
   elif [[ "${env}" == "sit" ]]; then
     ES_HOST="${SIT_ES_HOST}"
     ES_PORT="${SIT_ES_PORT}"
@@ -184,72 +205,57 @@ create_index() {
   INDEX_URL="${ES_PROTOCOL}://${ES_HOST}:${ES_PORT}/${ES_INDEX_NAME}-$(date +"%Y.%m.%d")"
   echo "URL: $INDEX_URL"
   curl -u "${ES_USERNAME}:${ES_PASSWORD}" -X PUT "$INDEX_URL" -H "Content-Type: application/json" -d '{
-    "mappings": {
-      "properties": {
-        "DBInstance": {
-          "type": "text",
-          "description": "数据库实例名称"
-        },
-        "Count": {
-          "type": "integer",
-          "description": "慢SQL的出现次数（慢查询日志中出现的次数）"
-        },
-        "Time": {
-          "type": "double",
-          "description": "执行最长时间"
-        },
-        "Time_total": {
-          "type": "double",
-          "description": "累计总耗费时间"
-        },
-        "Lock": {
-          "type": "double",
-          "description": "锁定时间"
-        },
-        "Lock_total": {
-          "type": "double",
-          "description": "累计锁定时间"
-        },
-        "Rows": {
-          "type": "integer",
-          "description": "发送给客户端的行总数"
-        },
-        "Rows_total": {
-          "type": "integer",
-          "description": "累计扫描的行总数"
-        },
-        "UserHost": {
-          "type": "text",
-          "description": "用户主机"
-        },
-        "SQL": {
-          "type": "text",
-          "description": "SQL语句"
-        },
-        "Username": {
-          "type": "text",
-          "description": "用户名"
-        },
-        "Host": {
-          "type": "ip",
-          "description": "客户端IP地址"
-        },
-        "Original_query": {
-          "type": "text",
-          "description": "原始查询"
-        },
-        "Trace_id": {
-          "type": "text",
-          "description": "跟踪ID"
-        },
-        "timestamp": {
-          "type": "date",
-          "format": "strict_date_optional_time||epoch_millis",
-          "description": "时间戳"
-        }
+  "mappings": {
+    "properties": {
+      "DBInstance": {
+        "type": "text"
+      },
+      "Count": {
+        "type": "integer"
+      },
+      "Time": {
+        "type": "double"
+      },
+      "Time_total": {
+        "type": "double"
+      },
+      "Lock": {
+        "type": "double"
+      },
+      "Lock_total": {
+        "type": "double"
+      },
+      "Rows": {
+        "type": "integer"
+      },
+      "Rows_total": {
+        "type": "integer"
+      },
+      "UserHost": {
+        "type": "text"
+      },
+      "SQL": {
+        "type": "text"
+      },
+      "Username": {
+        "type": "text"
+      },
+      "Host": {
+        "type": "ip"
+      },
+      "Original_query": {
+        "type": "text"
+      },
+      "Trace_id": {
+        "type": "text"
+      },
+      "timestamp": {
+        "type": "date",
+        "format": "strict_date_optional_time||epoch_millis"
       }
     }
   }
+}
 '
 
   if [ $? -eq 0 ]; then
@@ -362,14 +368,21 @@ main() {
   # 检查环境
   check_env
 
-  # 清空旧的日志文件
-  # clean_old_logs
+  if [[ "${env}" == "prod" ]]; then
+    # 清空旧的日志文件
+    clean_old_logs
 
-  # 同步aws数据库日志文件
-  # sync_db_log_files
+    # 同步aws数据库日志文件
+    sync_db_log_files
+  else
+    echo "跳过日志清空和数据库日志文件同步，运行环境：${env}"
+  fi
 
   # 运行慢查询日志统计
   mysqldumpslow
+
+  # 检查索引是否存在
+  check_index
 
   # 指定要扫描的目录和文件模式
   pattern="aurora-*-mysql.log"
@@ -403,8 +416,6 @@ main() {
       if [[ $line == "Count:"* ]]; then
         # 当遇到新的查询块时，发送已解析的查询
         if [ ! -z "$SQL" ]; then
-          # 检查索引是否存在
-          check_index
 
           SQL_JSON=$(echo "$SQL" | jq -R .)
           Original_query_JSON=$(echo "$Original_query" | jq -R .)
@@ -437,7 +448,6 @@ main() {
 
     # 发送最后一个查询
     if [ ! -z "$SQL" ]; then
-      check_index
 
       SQL_JSON=$(echo "$SQL" | jq -R .)
       Original_query_JSON=$(echo "$Original_query" | jq -R .)
