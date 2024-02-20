@@ -10,6 +10,7 @@ logdir="/usr/local/filebeat/logs"
 env=""     # 默认空
 log_num=10 # 默认统计10条慢查询日志
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token="
+access_token_team="98511d8d98a5f42af7c0e024780dd73df87925fc33a7b516d6f0b0d1342be67d" # 产研中心群
 access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
 # access_token="49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
 
@@ -337,6 +338,7 @@ send_dingding_message() {
   local DBInstance=$1
   local Host=$2
   local TraceId=$3
+  local AccessToken=$4
 
   # 获取当前时间（北京时间，用于显示和日志）
   display_time=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M:%S")
@@ -356,7 +358,7 @@ send_dingding_message() {
   }'
 
   echo "send_dingding_message: $data"
-  local url="$webhook_url$access_token"
+  local url="$webhook_url$AccessToken"
   curl "$url" -H 'Content-Type: application/json' -d "$data"
 }
 
@@ -455,10 +457,13 @@ main() {
       write_to_index "$DBInstance" "$Count" "$Time" "$Time_total" "$Lock" "$Lock_total" "$Rows" "$Rows_total" "$UserHost" "$SQL" "$Username" "$Host" "$Original_query_JSON" "$Trace_id"
     fi
 
-    # 当文件处理完毕，如果当前北京时间是上午8:30到09:30或13:30到14:30，则发送钉钉消息
+    # 当文件处理完毕，如果当前北京时间是上午10:00到11:30或13:30到14:30，则发送钉钉消息
     current_time=$(TZ=":Asia/Shanghai" date +"%H%M")
-    if (((current_time >= 830 && current_time < 930) || (current_time >= 1330 && current_time < 1430))); then
-      send_dingding_message "$DBInstance" "$Host" "$Trace_id"
+    if (((current_time >= 1000 && current_time < 1130) || (current_time >= 1330 && current_time < 1430))); then
+      # 应用负责人群
+      send_dingding_message "$DBInstance" "$Host" "$Trace_id" "$access_token"
+      # 产研中心群
+      send_dingding_message "$DBInstance" "$Host" "$Trace_id" "$access_token_team"
     else
       echo "禁止推送钉钉消息"
     fi
