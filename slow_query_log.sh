@@ -56,7 +56,7 @@ show_help() {
   echo "    -help, --help                                             显示帮助信息"
 }
 
-# 检查是否传递了 env
+# 检查是否传递了
 check_required_params() {
   if [[ -z "$env" ]]; then
     echo "错误: env 未提供"
@@ -183,7 +183,7 @@ sync_db_log_files() {
   done
 }
 
-# 统计耗时最长的5条慢查询
+# 统计耗时最长的N条慢查询
 mysqldumpslow() {
   cd ${logdir}
 
@@ -197,6 +197,8 @@ mysqldumpslow() {
 
     # 对最新的文件执行mysqldumpslow命令，按查询时间排序，仅显示输出中的前 N ​​个查询。并将结果输出到一个新的日志文件中
     /usr/bin/mysqldumpslow -s t -t "$log_num" "$latest_file" >"/usr/local/filebeat/logs/${output_filename}.log"
+
+    echo "统计近1天耗时最长的$log_num条慢查询日志文件: ${output_filename}.log"
   done
 }
 
@@ -361,8 +363,8 @@ send_dingding_message() {
   data='{
     "msgtype": "markdown",
     "markdown": {
-      "title": "'"${DBInstance}"' 【统计耗时最长的'"$log_num"'条慢查询】",
-      "text": "# <font color=\"red\">'"${DBInstance}"' 【统计耗时最长的'"$log_num"'条慢查询】</font>\n- **告警环境**: '"${env}"'\n- **告警实例**: '"${DBInstance}"'\n- **告警时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${TraceId}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${url}"')"
+      "title": "'"${DBInstance}"' 【统计近1天耗时最长的'"$log_num"'条慢查询】",
+      "text": "# <font color=\"red\">'"${DBInstance}"' 【统计近1天耗时最长的'"$log_num"'条慢查询】</font>\n- **告警环境**: '"${env}"'\n- **告警实例**: '"${DBInstance}"'\n- **告警时间**: '"${display_time}"'\n- **告警索引**: '"${ES_INDEX_NAME}"-$(date +"%Y.%m.%d")'\n- **TraceId**: '"${TraceId}"'\n- **详情请戳**: [Kinban搜索TraceId]('"${url}"')"
     },
     "at": {
       "isAtAll": true
@@ -370,8 +372,8 @@ send_dingding_message() {
   }'
 
   echo "send_dingding_message: $data"
-  local url="$webhook_url$AccessToken"
-  curl "$url" -H 'Content-Type: application/json' -d "$data"
+  local dingtalk_url="$webhook_url$AccessToken"
+  curl "$dingtalk_url" -H 'Content-Type: application/json' -d "$data"
 }
 
 # 主逻辑
@@ -447,9 +449,12 @@ main() {
         Rows_total=$(echo "$line" | perl -n -e'/Rows=.*? \((.*?)\)/ && print $1')   # 累计扫描的行总数(Rows)
         UserHost=$(echo "$line" | awk -F',' '{print $2}' | sed 's/^ *//')           # 用户主机
         Username=$(echo "$UserHost" | perl -n -e'/(\w+)\[.*?\]/ && print $1')       # 用户名
-        # 提取主机名并移除方括号
-        Host=$(echo "$UserHost" | perl -n -e'/@\[(.*)\]/ && print $1') # 客户端ip
-
+        # 提取客户端 IP 地址，如果为空则使用默认值
+        Host=$(echo "$UserHost" | perl -n -e'/@\[(.*)\]/ && print $1')
+        if [ -z "$Host" ]; then
+            Host="127.0.0.1"  # 默认 IP 地址，您可以根据实际情况修改
+        fi
+        
         # 重置 SQL 和 Original_query 变量
         SQL=""
         Original_query="$line"
@@ -469,9 +474,9 @@ main() {
       write_to_index "$DBInstance" "$Count" "$Time" "$Time_total" "$Lock" "$Lock_total" "$Rows" "$Rows_total" "$UserHost" "$SQL" "$Username" "$Host" "$Original_query_JSON" "$Trace_id"
     fi
 
-    # 当文件处理完毕，如果当前北京时间是上午10:00到10:30或13:30到14:30，则发送钉钉消息
+    # 当文件处理完毕，如果当前北京时间是上午10:00到10:59，则发送钉钉消息
     current_time=$(TZ=":Asia/Shanghai" date +"%H%M")
-    if (((current_time >= 1000 && current_time < 1030) || (current_time >= 1330 && current_time < 1430))); then
+    if (((current_time >= 1000 && current_time < 1059))); then
       # 应用负责人群
       send_dingding_message "$DBInstance" "$Host" "$Trace_id" "$access_token"
       # 产研中心群
