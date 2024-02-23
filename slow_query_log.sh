@@ -8,7 +8,7 @@ num="$(expr $(date -u +%H) - 1)"
 logdir="/usr/local/filebeat/logs"
 
 env=""     # 默认空
-log_num=10 # 默认统计10条慢查询日志
+log_num=5 # 默认统计5条慢查询日志
 webhook_url="https://oapi.dingtalk.com/robot/send?access_token="
 access_token_team="98511d8d98a5f42af7c0e024780dd73df87925fc33a7b516d6f0b0d1342be67d" # 产研中心群
 access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
@@ -157,17 +157,29 @@ clean_old_logs() {
 
 # 同步aws数据库日志文件
 sync_db_log_files() {
-  for db in ${databases_list[@]}; do
-    #获取循环库-每天慢查询文件名
-    /usr/local/bin/aws rds describe-db-log-files --db-instance-identifier ${db} --output text | awk '{print $3}' | sed '$d' | grep "mysql-slowquery" | tail -1 >${db}.list
+  local current_date=$(date +"%Y%m%d")  # 获取当前日期
 
-    for slowfile_name in $( #将每个库-上一个小时生产的日志存放在本地日志中
-      cat ${db}.list
-    ); do
+  for db in ${databases_list[@]}; do
+    # 获取循环库-每天慢查询文件名，最后一个
+    #/usr/local/bin/aws rds describe-db-log-files --db-instance-identifier ${db} --output text | awk '{print $3}' | sed '$d' | grep "mysql-slowquery" | tail -1 >${db}.list
+
+    # for slowfile_name in $( #将每个库-上一个小时生产的日志存放在本地日志中
+    #   # cat ${db}.list
+    # ); do
+    #   slow_name=$(echo "${slowfile_name}" | awk -F '.' '{print $3"."$4}')
+    #   /usr/local/bin/aws rds download-db-log-file-portion --db-instance-identifier ${db} --log-file-name ${slowfile_name} --starting-token 0 --output text >${logdir}/${db}-${slow_name}.log
+    # done
+    
+    # 获取循环库-每天慢查询文件名(aws rds 只保存24小时以内日志,共有24个日志) 
+    slowfile_names=$(/usr/local/bin/aws rds describe-db-log-files --db-instance-identifier ${db} --output text | awk '{print $3}' | grep "mysql-slowquery")
+
+    for slowfile_name in $slowfile_names; do
       slow_name=$(echo "${slowfile_name}" | awk -F '.' '{print $3"."$4}')
-      /usr/local/bin/aws rds download-db-log-file-portion --db-instance-identifier ${db} --log-file-name ${slowfile_name} --starting-token 0 --output text >${logdir}/${db}-${slow_name}.log
+      /usr/local/bin/aws rds download-db-log-file-portion --db-instance-identifier ${db} --log-file-name ${slowfile_name} --starting-token 0 --output text > ${logdir}/${db}-${slow_name}-${current_date}.log
     done
 
+    # 合并当前数据库的日志文件
+    cat ${logdir}/${db}-*-${current_date}.log > ${logdir}/${db}-slowquery_merged_logs-${current_date}.log
   done
 }
 
@@ -176,7 +188,7 @@ mysqldumpslow() {
   cd ${logdir}
 
   # 使用通配符找到所有满足模式的文件
-  for file in aurora-*-mysql-*; do
+  for file in aurora-*-mysql-slowquery_merged_logs-*; do
     # 获取最新的文件
     latest_file=$(ls -l "$file" | tail -1 | awk '{print $NF}')
 
@@ -457,9 +469,9 @@ main() {
       write_to_index "$DBInstance" "$Count" "$Time" "$Time_total" "$Lock" "$Lock_total" "$Rows" "$Rows_total" "$UserHost" "$SQL" "$Username" "$Host" "$Original_query_JSON" "$Trace_id"
     fi
 
-    # 当文件处理完毕，如果当前北京时间是上午10:00到11:30或13:30到14:30，则发送钉钉消息
+    # 当文件处理完毕，如果当前北京时间是上午10:00到10:30或13:30到14:30，则发送钉钉消息
     current_time=$(TZ=":Asia/Shanghai" date +"%H%M")
-    if (((current_time >= 1000 && current_time < 1130) || (current_time >= 1330 && current_time < 1430))); then
+    if (((current_time >= 1000 && current_time < 1030) || (current_time >= 1330 && current_time < 1430))); then
       # 应用负责人群
       send_dingding_message "$DBInstance" "$Host" "$Trace_id" "$access_token"
       # 产研中心群
