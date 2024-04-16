@@ -244,7 +244,7 @@ mysqldumpslow() {
         filter_pattern+="|"
       fi
       # 添加用户到过滤模式
-      filter_pattern+="# User@Host: $user\\[$user\\]"
+      filter_pattern+="# User@Host: $user[$user]"
     done
 
     echo "过滤白名单用户：${user_array[@]}"
