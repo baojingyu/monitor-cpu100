@@ -14,6 +14,9 @@ access_token_team="98511d8d98a5f42af7c0e024780dd73df87925fc33a7b516d6f0b0d1342be
 access_token="0d53b78985b674a88d61c3a24de4b98a9ea73c03f2d12ef032754b3f6c81994c" # 应用负责人群
 # access_token="49786f18c410e3a7aaf4c89ba30ff0be8844ae3360cc04b7bb928e18f6e16091"
 
+# 定义白名单用户
+declare -a user_array=("dwh_ro" "dwh_rw" "ydp_system")
+
 awsAccessKeyId=""
 awsSecretAccessKey=""
 
@@ -51,7 +54,7 @@ show_help() {
   echo "  可选选项:"
   echo "    -awsAccessKeyId, --awsAccessKeyId                         设置awsAccessKeyId"
   echo "    -awsSecretAccessKey, --awsSecretAccessKey                 设置awsSecretAccessKey"
-  echo "    -log_num, --log_num                                       设置慢查询日志条数，（缺省：10条）"
+  echo "    -log_num, --log_num                                       设置慢查询日志条数，（缺省：5条）"
   echo "    -access_token, --access_token                             设置钉钉机器人访问令牌，（缺省：应用负责人群）"
   echo "    -help, --help                                             显示帮助信息"
 }
@@ -183,6 +186,26 @@ sync_db_log_files() {
   done
 }
 
+# # 统计耗时最长的N条慢查询
+# mysqldumpslow() {
+#   cd ${logdir}
+
+#   # 使用通配符找到所有满足模式的文件
+#   for file in aurora-*-mysql-slowquery_merged_logs-*; do
+#     # 获取最新的文件
+#     latest_file=$(ls -l "$file" | tail -1 | awk '{print $NF}')
+
+#     # 提取文件名中需要的部分
+#     output_filename=$(echo "$latest_file" | cut -d '-' -f1-3)
+
+#     # 对最新的文件执行mysqldumpslow命令，按查询时间排序，仅显示输出中的前 N ​​个查询。并将结果输出到一个新的日志文件中
+#     /usr/bin/mysqldumpslow -s t -t "$log_num" "$latest_file" >"/usr/local/filebeat/logs/${output_filename}.log"
+
+#     echo "统计近1天耗时最长的$log_num条慢查询日志文件: ${output_filename}.log"
+#   done
+# }
+
+
 # 统计耗时最长的N条慢查询
 mysqldumpslow() {
   cd ${logdir}
@@ -195,12 +218,54 @@ mysqldumpslow() {
     # 提取文件名中需要的部分
     output_filename=$(echo "$latest_file" | cut -d '-' -f1-3)
 
-    # 对最新的文件执行mysqldumpslow命令，按查询时间排序，仅显示输出中的前 N ​​个查询。并将结果输出到一个新的日志文件中
-    /usr/bin/mysqldumpslow -s t -t "$log_num" "$latest_file" >"/usr/local/filebeat/logs/${output_filename}.log"
+    # 创建一个临时文件存储过滤后的慢查询日志
+    filtered_slow_log="/usr/local/filebeat/logs/${output_filename}_filtered.log"
 
-    echo "统计近1天耗时最长的$log_num条慢查询日志文件: ${output_filename}.log"
+    # 创建一个文件存储被过滤掉的慢查询日志
+    excluded_slow_log="/usr/local/filebeat/logs/${output_filename}_excluded.log"
+
+    # 定义一个空字符串作为过滤模式
+    filter_pattern=""
+
+    # 检查并删除已存在的文件
+    for logfile in "$filtered_slow_log" "$excluded_slow_log" "/usr/local/filebeat/logs/${output_filename}.log"
+    do
+      if [ -e "$logfile" ]; then
+        rm "$logfile"
+        echo "已删除旧日志文件：$logfile"
+      fi
+    done    
+
+    # 循环生成过滤模式
+    for user in "${user_array[@]}"
+    do
+      # 如果过滤模式不为空，则在前面添加"|"
+      if [ -n "$filter_pattern" ]; then
+        filter_pattern+="|"
+      fi
+      # 添加用户到过滤模式
+      filter_pattern+="# User@Host: $user\\[$user\\]"
+    done
+
+    echo "过滤白名单用户：${user_array[@]}"
+
+    # 使用awk过滤掉特定用户的所有查询，并将被过滤掉的查询保存到另一个文件
+    awk -v pattern="$filter_pattern" '
+    BEGIN { RS="# Time: "; ORS="" }
+    $0 ~ pattern { print (NR==1 ? "" : "# Time: ") $0 >> "'$excluded_slow_log'" }
+    $0 !~ pattern { print (NR==1 ? "" : "# Time: ") $0 }
+    ' "$latest_file" > "$filtered_slow_log"
+
+    echo "保存过滤后的慢查询日志文件：${filtered_slow_log}"
+    echo "保存被过滤掉的慢查询日志文件：${excluded_slow_log}"
+
+    # 对过滤后的慢查询日志进行分析
+    /usr/bin/mysqldumpslow -s t -t "$log_num" "$filtered_slow_log" >"/usr/local/filebeat/logs/${output_filename}.log"
+
+    echo "统计近1天耗时最长的$log_num条慢查询日志文件（已过滤白名单用户）: ${output_filename}.log"
   done
 }
+
 
 # 检查索引是否存在
 check_index() {
